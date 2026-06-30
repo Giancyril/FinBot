@@ -54,6 +54,7 @@ export default function Dashboard() {
   const [budgets, setBudgets] = useState([]);
   const [savings, setSavings] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
+  const [balances, setBalances] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -103,13 +104,14 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [sumRes, catRes, trendRes, budgetRes, savingsRes, subsRes] = await Promise.all([
+      const [sumRes, catRes, trendRes, budgetRes, savingsRes, subsRes, balanceRes] = await Promise.all([
         axios.get('/api/transactions/summary'),
         axios.get('/api/transactions/by-category'),
         axios.get('/api/transactions/daily-trend'),
         axios.get('/api/budgets'),
         axios.get('/api/savings'),
         axios.get('/api/subscriptions'),
+        axios.get('/api/plaid/balances'),
       ]);
       setSummary(sumRes.data);
       setCategoryData(catRes.data || []);
@@ -117,6 +119,7 @@ export default function Dashboard() {
       setBudgets(budgetRes.data || []);
       setSavings(savingsRes.data || []);
       setSubscriptions(subsRes.data || []);
+      setBalances(balanceRes.data || null);
     } catch (err) {
       console.error(err);
     } finally {
@@ -278,11 +281,21 @@ export default function Dashboard() {
           <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-transparent to-transparent pointer-events-none" />
           <div className="absolute -top-8 -right-8 w-40 h-40 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
           <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                Good to see you{user?.email ? `, ${user.email.split('@')[0]}` : ''}!
-              </h2>
-              <p className="text-gray-500 text-xs sm:text-sm mt-0.5">Here's your financial overview for this period.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                  Good to see you{user?.email ? `, ${user.email.split('@')[0]}` : ''}!
+                </h2>
+                <p className="text-gray-500 text-xs sm:text-sm mt-0.5">Here's your financial overview for this period.</p>
+              </div>
+              {balances && (
+                <div className="sm:border-l sm:border-white/10 sm:pl-6 py-0.5">
+                  <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Net Worth</p>
+                  <p className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent tracking-tight mt-0.5">
+                    ${Number(balances.summary?.net_worth).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -374,6 +387,35 @@ export default function Dashboard() {
 
               {/* Sidebar Column */}
               <div className="flex flex-col gap-3 sm:gap-4 lg:col-span-1">
+                {/* Linked Accounts */}
+                <div className="bg-gray-900 border border-white/5 rounded-2xl flex flex-col">
+                  <SectionHeader title="Linked Accounts" sub="Real-time balances from Plaid" />
+                  <div className="p-4 sm:p-5">
+                    <div className="space-y-3 overflow-y-auto max-h-[160px] pr-1 min-h-[80px]">
+                      {!balances?.accounts || balances.accounts.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-6 text-center">
+                          <p className="text-gray-650 text-[11px]">No accounts connected yet</p>
+                        </div>
+                      ) : (
+                        balances.accounts.map((acct) => {
+                          const isLiability = acct.type === 'credit' || acct.type === 'loan';
+                          return (
+                            <div key={acct.id} className="flex items-center justify-between text-[11px] hover:bg-white/[0.01] py-0.5 rounded transition-colors">
+                              <div className="min-w-0 pr-2">
+                                <p className="text-gray-300 font-semibold truncate">{acct.name}</p>
+                                <p className="text-gray-600 text-[9px] truncate mt-0.5">{acct.institution_name} • {acct.subtype}</p>
+                              </div>
+                              <span className={`font-mono font-bold shrink-0 ${isLiability ? 'text-rose-450/90' : 'text-emerald-400/90'}`}>
+                                {isLiability ? '-' : ''}${Math.abs(acct.balance_current).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Monthly Budgets */}
                 <div className="bg-gray-900 border border-white/5 rounded-2xl flex flex-col">
                   <SectionHeader title="Monthly Budgets" sub="Set limits and track spending" />
