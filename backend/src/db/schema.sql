@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS plaid_items (
 CREATE TABLE IF NOT EXISTS transactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  plaid_transaction_id VARCHAR(255) UNIQUE NOT NULL,
+  plaid_transaction_id VARCHAR(255) UNIQUE,
   amount DECIMAL(12, 2) NOT NULL,
   category VARCHAR(255),
   subcategory VARCHAR(255),
@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   name VARCHAR(255),
   date DATE NOT NULL,
   pending BOOLEAN DEFAULT FALSE,
+  is_manual BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

@@ -231,4 +231,51 @@ router.get('/summary', authMiddleware, async (req, res) => {
   }
 });
 
+// POST /api/transactions
+// Log a manual transaction
+router.post('/', authMiddleware, async (req, res) => {
+  const { amount, category, merchant_name, name, date } = req.body;
+  if (amount == null || !name || !date) {
+    return res.status(400).json({ error: 'Amount, description/name, and date are required' });
+  }
+
+  try {
+    const crypto = require('crypto');
+    const manualId = `manual_${crypto.randomUUID()}`;
+    
+    const result = await pool.query(
+      `INSERT INTO transactions
+         (user_id, plaid_transaction_id, amount, category, merchant_name, name, date, is_manual, pending)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, FALSE)
+       RETURNING *`,
+      [req.user.id, manualId, parseFloat(amount), category || 'Other', merchant_name || null, name, date]
+    );
+    
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error logging manual transaction:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// DELETE /api/transactions/:id
+// Delete a manual transaction
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM transactions WHERE id = $1 AND user_id = $2 AND is_manual = TRUE RETURNING *',
+      [req.params.id, req.user.id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Transaction not found or not a manual transaction' });
+    }
+
+    res.json({ message: 'Transaction deleted successfully', transaction: result.rows[0] });
+  } catch (err) {
+    console.error('Error deleting transaction:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 module.exports = { router, syncItemTransactions };

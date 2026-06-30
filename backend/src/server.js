@@ -88,6 +88,11 @@ async function initDatabase() {
     const schemaPath = path.join(__dirname, 'db', 'schema.sql');
     const schemaSql = fs.readFileSync(schemaPath, 'utf8');
     await pool.query(schemaSql);
+    
+    // Migration for Manual Transactions
+    await pool.query('ALTER TABLE transactions ALTER COLUMN plaid_transaction_id DROP NOT NULL');
+    await pool.query('ALTER TABLE transactions ADD COLUMN IF NOT EXISTS is_manual BOOLEAN DEFAULT FALSE');
+
     console.log('Database tables verified/created successfully.');
   } catch (err) {
     console.error('Failed to initialize database schema:', err.message);
