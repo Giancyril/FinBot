@@ -63,3 +63,17 @@ CREATE TABLE IF NOT EXISTS budgets (
   CONSTRAINT unique_user_category UNIQUE (user_id, category)
 );
 
+-- Savings goals table
+CREATE TABLE IF NOT EXISTS savings_goals (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  target_amount DECIMAL(12, 2) NOT NULL,
+  current_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+  target_date DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_savings_goals_user ON savings_goals(user_id);
+

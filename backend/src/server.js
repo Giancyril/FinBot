@@ -7,6 +7,7 @@ const plaidRoutes = require('./routes/plaid');
 const { router: transactionRoutes } = require('./routes/transactions');
 const chatRoutes = require('./routes/chat');
 const budgetRoutes = require('./routes/budgets');
+const savingsRoutes = require('./routes/savings');
 const initTransactionCron = require('./cron/syncTransactions');
 const pool = require('./config/db');
 const fs = require('fs');
@@ -68,6 +69,7 @@ app.use('/api/plaid', plaidRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/budgets', budgetRoutes);
+app.use('/api/savings', savingsRoutes);
 
 // Health check
 app.get('/health', async (req, res) => {
