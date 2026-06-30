@@ -8,6 +8,7 @@ const { router: transactionRoutes } = require('./routes/transactions');
 const chatRoutes = require('./routes/chat');
 const budgetRoutes = require('./routes/budgets');
 const savingsRoutes = require('./routes/savings');
+const subscriptionRoutes = require('./routes/subscriptions');
 const initTransactionCron = require('./cron/syncTransactions');
 const pool = require('./config/db');
 const fs = require('fs');
@@ -70,6 +71,7 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/savings', savingsRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
 
 // Health check
 app.get('/health', async (req, res) => {
