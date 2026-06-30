@@ -51,3 +51,15 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 
 CREATE INDEX IF NOT EXISTS idx_chat_messages_user ON chat_messages(user_id, created_at DESC);
+
+-- Budgets table (upsertable limits per category)
+CREATE TABLE IF NOT EXISTS budgets (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  category VARCHAR(255) NOT NULL,
+  limit_amount DECIMAL(12, 2) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT unique_user_category UNIQUE (user_id, category)
+);
+
