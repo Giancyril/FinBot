@@ -278,4 +278,72 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/transactions/monthly-compare
+// Returns category spending for current vs previous month
+router.get('/monthly-compare', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const now = new Date();
+
+    // Current month range
+    const currStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const currEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+    // Previous month range
+    const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+    const prevEnd   = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+
+    const [currResult, prevResult] = await Promise.all([
+      pool.query(
+        `SELECT category, SUM(amount) AS total
+         FROM transactions
+         WHERE user_id = $1 AND date >= $2 AND date <= $3 AND amount > 0
+         GROUP BY category ORDER BY total DESC`,
+        [userId, currStart, currEnd]
+      ),
+      pool.query(
+        `SELECT category, SUM(amount) AS total
+         FROM transactions
+         WHERE user_id = $1 AND date >= $2 AND date <= $3 AND amount > 0
+         GROUP BY category ORDER BY total DESC`,
+        [userId, prevStart, prevEnd]
+      ),
+    ]);
+
+    // Build a unified category list
+    const allCategories = new Set([
+      ...currResult.rows.map(r => r.category),
+      ...prevResult.rows.map(r => r.category),
+    ]);
+
+    const currMap = Object.fromEntries(currResult.rows.map(r => [r.category, Number(r.total)]));
+    const prevMap = Object.fromEntries(prevResult.rows.map(r => [r.category, Number(r.total)]));
+
+    const comparison = [...allCategories].map(cat => {
+      const curr = currMap[cat] || 0;
+      const prev = prevMap[cat] || 0;
+      const diff = curr - prev;
+      const pct  = prev > 0 ? Math.round((diff / prev) * 100) : (curr > 0 ? 100 : 0);
+      return { category: cat, current: curr, previous: prev, diff, pct };
+    }).sort((a, b) => b.current - a.current);
+
+    // Overall totals
+    const totalCurrent  = currResult.rows.reduce((s, r) => s + Number(r.total), 0);
+    const totalPrevious = prevResult.rows.reduce((s, r) => s + Number(r.total), 0);
+    const totalDiff     = totalCurrent - totalPrevious;
+    const totalPct      = totalPrevious > 0 ? Math.round((totalDiff / totalPrevious) * 100) : (totalCurrent > 0 ? 100 : 0);
+
+    return res.json({
+      current_month:  { label: now.toLocaleString('en-US', { month: 'long', year: 'numeric' }), start: currStart, end: currEnd },
+      previous_month: { label: new Date(now.getFullYear(), now.getMonth() - 1).toLocaleString('en-US', { month: 'long', year: 'numeric' }), start: prevStart, end: prevEnd },
+      summary: { total_current: totalCurrent, total_previous: totalPrevious, total_diff: totalDiff, total_pct: totalPct },
+      categories: comparison.slice(0, 8),
+    });
+  } catch (err) {
+    console.error('Monthly compare error:', err.message);
+    return res.status(500).json({ error: 'Failed to fetch monthly comparison.' });
+  }
+});
+
 module.exports = { router, syncItemTransactions };
+

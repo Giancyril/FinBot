@@ -57,6 +57,7 @@ export default function Dashboard() {
   const [savings, setSavings] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
   const [balances, setBalances] = useState(null);
+  const [monthlyCompare, setMonthlyCompare] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -107,7 +108,7 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [sumRes, catRes, trendRes, budgetRes, savingsRes, subsRes, balanceRes] = await Promise.all([
+      const [sumRes, catRes, trendRes, budgetRes, savingsRes, subsRes, balanceRes, compareRes] = await Promise.all([
         axios.get('/api/transactions/summary'),
         axios.get('/api/transactions/by-category'),
         axios.get('/api/transactions/daily-trend'),
@@ -115,6 +116,7 @@ export default function Dashboard() {
         axios.get('/api/savings'),
         axios.get('/api/subscriptions'),
         axios.get('/api/plaid/balances'),
+        axios.get('/api/transactions/monthly-compare'),
       ]);
       setSummary(sumRes.data);
       setCategoryData(catRes.data || []);
@@ -123,6 +125,7 @@ export default function Dashboard() {
       setSavings(savingsRes.data || []);
       setSubscriptions(subsRes.data || []);
       setBalances(balanceRes.data || null);
+      setMonthlyCompare(compareRes.data || null);
     } catch (err) {
       console.error(err);
     } finally {
@@ -384,6 +387,87 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+
+            {/* ── Month-over-Month Comparison ── */}
+            {monthlyCompare && (
+              <div className="bg-gray-900 border border-white/5 rounded-2xl">
+                <SectionHeader
+                  title="Month-over-Month Spending"
+                  sub={`${monthlyCompare.previous_month?.label} → ${monthlyCompare.current_month?.label}`}
+                  action={
+                    <span className={`flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-lg ${
+                      monthlyCompare.summary.total_pct > 0
+                        ? 'text-red-400 bg-red-400/10'
+                        : monthlyCompare.summary.total_pct < 0
+                        ? 'text-emerald-400 bg-emerald-400/10'
+                        : 'text-gray-400 bg-gray-400/10'
+                    }`}>
+                      {monthlyCompare.summary.total_pct > 0 ? '▲' : monthlyCompare.summary.total_pct < 0 ? '▼' : '—'}
+                      {Math.abs(monthlyCompare.summary.total_pct)}%
+                    </span>
+                  }
+                />
+                <div className="p-4 sm:p-5">
+                  {/* Overall summary banner */}
+                  <div className="flex items-center justify-between mb-4 p-3 bg-gray-800/40 border border-white/5 rounded-xl">
+                    <div className="text-center">
+                      <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mb-0.5">Last Month</p>
+                      <p className="text-base font-bold text-gray-300">${monthlyCompare.summary.total_previous.toFixed(2)}</p>
+                    </div>
+                    <div className={`flex flex-col items-center ${monthlyCompare.summary.total_diff > 0 ? 'text-red-400' : monthlyCompare.summary.total_diff < 0 ? 'text-emerald-400' : 'text-gray-500'}`}>
+                      <span className="text-lg font-bold">{monthlyCompare.summary.total_diff > 0 ? '+' : ''}{monthlyCompare.summary.total_diff.toFixed(2)}</span>
+                      <span className="text-[10px] font-medium">{monthlyCompare.summary.total_pct > 0 ? 'more spent' : monthlyCompare.summary.total_pct < 0 ? 'less spent' : 'no change'}</span>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mb-0.5">This Month</p>
+                      <p className="text-base font-bold text-white">${monthlyCompare.summary.total_current.toFixed(2)}</p>
+                    </div>
+                  </div>
+                  {/* Per-category breakdown */}
+                  {monthlyCompare.categories.length === 0 ? (
+                    <p className="text-gray-600 text-xs text-center py-4">No spending data to compare yet.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {monthlyCompare.categories.map((cat) => {
+                        const maxVal = Math.max(cat.current, cat.previous, 1);
+                        const currWidth = Math.round((cat.current / maxVal) * 100);
+                        const prevWidth = Math.round((cat.previous / maxVal) * 100);
+                        return (
+                          <div key={cat.category} className="group bg-gray-800/30 hover:bg-gray-800/60 border border-white/5 rounded-xl p-3 transition-all">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[11px] font-semibold text-gray-300 truncate max-w-[110px]">{cat.category}</span>
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg ${
+                                cat.pct > 0 ? 'text-red-400 bg-red-400/10' : cat.pct < 0 ? 'text-emerald-400 bg-emerald-400/10' : 'text-gray-500 bg-gray-700/50'
+                              }`}>
+                                {cat.pct > 0 ? '+' : ''}{cat.pct}%
+                              </span>
+                            </div>
+                            {/* Current month bar */}
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] text-gray-600 w-8 shrink-0">Now</span>
+                                <div className="flex-1 bg-gray-700/40 rounded-full h-1.5">
+                                  <div className="h-1.5 rounded-full bg-indigo-500 transition-all duration-500" style={{ width: `${currWidth}%` }} />
+                                </div>
+                                <span className="text-[9px] text-gray-400 w-12 text-right shrink-0">${cat.current.toFixed(0)}</span>
+                              </div>
+                              {/* Previous month bar */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] text-gray-600 w-8 shrink-0">Prev</span>
+                                <div className="flex-1 bg-gray-700/40 rounded-full h-1.5">
+                                  <div className="h-1.5 rounded-full bg-gray-500/60 transition-all duration-500" style={{ width: `${prevWidth}%` }} />
+                                </div>
+                                <span className="text-[9px] text-gray-600 w-12 text-right shrink-0">${cat.previous.toFixed(0)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* ── Transactions & Budgets ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
