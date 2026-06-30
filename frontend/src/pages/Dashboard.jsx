@@ -7,11 +7,12 @@ import TransactionList from '../components/TransactionList';
 import CategoryBarChart from '../components/charts/CategoryBarChart';
 import SpendingLineChart from '../components/charts/SpendingLineChart';
 import CustomSelectDropdown from '../components/CustomSelectDropdown';
+import SettingsModal from '../components/SettingsModal';
 import {
   Wallet, MessageSquare, LogOut, RefreshCw, DollarSign,
   TrendingUp, Receipt, ShoppingBag, ArrowRight, Bot,
   LayoutDashboard, ChevronDown, Sparkles, Trash2,
-  Plus, PiggyBank, Calendar,
+  Plus, PiggyBank, Calendar, Settings,
 } from 'lucide-react';
 
 const CATEGORIES = ['Food and Drink', 'Shops', 'Travel', 'Service', 'Recreation', 'Transfer', 'Payment'];
@@ -59,6 +60,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const [budgetCategory, setBudgetCategory] = useState('');
   const [budgetLimit, setBudgetLimit] = useState('');
@@ -265,6 +267,12 @@ export default function Dashboard() {
             <button onClick={handleSync} disabled={syncing}
               className="w-9 h-9 flex items-center justify-center bg-gray-800/40 border border-white/5 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-40">
               <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
+            </button>
+            <button onClick={() => setIsSettingsOpen(true)}
+              className="w-9 h-9 flex items-center justify-center bg-gray-800/40 border border-white/5 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+              title="Settings"
+            >
+              <Settings size={12} />
             </button>
             <button onClick={handleLogout}
               className="w-9 h-9 flex items-center justify-center bg-gray-800/40 border border-white/5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-400/5 transition-all">
@@ -804,7 +812,14 @@ export default function Dashboard() {
             </form>
           </div>
         </div>
-      )}
+      {/* ── Settings Modal ── */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => {
+          setIsSettingsOpen(false);
+          fetchData();
+        }}
+      />
     </div>
   );
 }
