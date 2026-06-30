@@ -11,6 +11,7 @@ import {
   Wallet, MessageSquare, LogOut, RefreshCw, DollarSign,
   TrendingUp, Receipt, ShoppingBag, ArrowRight, Bot,
   LayoutDashboard, ChevronDown, Sparkles, Trash2,
+  Plus, PiggyBank, Calendar,
 } from 'lucide-react';
 
 const CATEGORIES = ['Food and Drink', 'Shops', 'Travel', 'Service', 'Recreation', 'Transfer', 'Payment'];
@@ -51,6 +52,7 @@ export default function Dashboard() {
   const [categoryData, setCategoryData] = useState([]);
   const [trendData, setTrendData] = useState([]);
   const [budgets, setBudgets] = useState([]);
+  const [savings, setSavings] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -59,19 +61,28 @@ export default function Dashboard() {
   const [budgetCategory, setBudgetCategory] = useState('');
   const [budgetLimit, setBudgetLimit] = useState('');
 
+  const [goalName, setGoalName] = useState('');
+  const [goalTarget, setGoalTarget] = useState('');
+  const [goalCurrent, setGoalCurrent] = useState('');
+  const [goalDate, setGoalDate] = useState('');
+  const [contributeAmount, setContributeAmount] = useState({});
+  const [contributeOpenId, setContributeOpenId] = useState(null);
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [sumRes, catRes, trendRes, budgetRes] = await Promise.all([
+      const [sumRes, catRes, trendRes, budgetRes, savingsRes] = await Promise.all([
         axios.get('/api/transactions/summary'),
         axios.get('/api/transactions/by-category'),
         axios.get('/api/transactions/daily-trend'),
         axios.get('/api/budgets'),
+        axios.get('/api/savings'),
       ]);
       setSummary(sumRes.data);
       setCategoryData(catRes.data || []);
       setTrendData(trendRes.data || []);
       setBudgets(budgetRes.data || []);
+      setSavings(savingsRes.data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -98,6 +109,50 @@ export default function Dashboard() {
   const handleDeleteBudget = async (id) => {
     try {
       await axios.delete(`/api/budgets/${id}`);
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCreateSavingsGoal = async (e) => {
+    e.preventDefault();
+    if (!goalName || !goalTarget || parseFloat(goalTarget) <= 0) return;
+    try {
+      await axios.post('/api/savings', {
+        name: goalName,
+        target_amount: parseFloat(goalTarget),
+        current_amount: parseFloat(goalCurrent) || 0,
+        target_date: goalDate || null,
+      });
+      setGoalName('');
+      setGoalTarget('');
+      setGoalCurrent('');
+      setGoalDate('');
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleContribute = async (goalId, currentAmount) => {
+    const amountToAdd = parseFloat(contributeAmount[goalId]);
+    if (isNaN(amountToAdd) || amountToAdd <= 0) return;
+    try {
+      await axios.put(`/api/savings/${goalId}`, {
+        current_amount: currentAmount + amountToAdd,
+      });
+      setContributeAmount({ ...contributeAmount, [goalId]: '' });
+      setContributeOpenId(null);
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteSavingsGoal = async (id) => {
+    try {
+      await axios.delete(`/api/savings/${id}`);
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -275,80 +330,214 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Monthly Budgets */}
-              <div className="bg-gray-900 border border-white/5 rounded-2xl flex flex-col">
-                <SectionHeader title="Monthly Budgets" sub="Set limits and track spending" />
-                <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between gap-4">
-                  {/* Set Budget Form */}
-                  <form onSubmit={handleSetBudget} className="space-y-2">
-                    <div className="flex gap-2">
-                      <CustomSelectDropdown
-                        value={budgetCategory}
-                        onChange={setBudgetCategory}
-                        options={CATEGORIES}
-                        placeholder="Category"
-                        className="flex-1"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Limit ($)"
-                        value={budgetLimit}
-                        onChange={(e) => setBudgetLimit(e.target.value)}
-                        className="w-24 bg-gray-800/60 border border-white/5 text-white placeholder-gray-600 text-xs rounded-xl px-3 py-2.5 outline-none focus:border-white/10 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="w-full py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/35 text-indigo-400 text-xs font-semibold rounded-xl transition-all shadow-sm"
-                    >
-                      Set Limit
-                    </button>
-                  </form>
-
-                  {/* Budgets List */}
-                  <div className="space-y-3.5 flex-1 overflow-y-auto max-h-[300px] pr-1 min-h-[150px]">
-                    {budgets.length === 0 ? (
-                      <div className="h-full flex flex-col items-center justify-center py-8 text-center">
-                        <p className="text-gray-600 text-xs">No budgets configured yet</p>
-                        <p className="text-gray-700 text-[10px] mt-1">Set a budget above to start tracking</p>
+              {/* Sidebar Column */}
+              <div className="flex flex-col gap-3 sm:gap-4 lg:col-span-1">
+                {/* Monthly Budgets */}
+                <div className="bg-gray-900 border border-white/5 rounded-2xl flex flex-col">
+                  <SectionHeader title="Monthly Budgets" sub="Set limits and track spending" />
+                  <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between gap-4">
+                    {/* Set Budget Form */}
+                    <form onSubmit={handleSetBudget} className="space-y-2">
+                      <div className="flex gap-2">
+                        <CustomSelectDropdown
+                          value={budgetCategory}
+                          onChange={setBudgetCategory}
+                          options={CATEGORIES}
+                          placeholder="Category"
+                          className="flex-1"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Limit ($)"
+                          value={budgetLimit}
+                          onChange={(e) => setBudgetLimit(e.target.value)}
+                          className="w-24 bg-gray-800/60 border border-white/5 text-white placeholder-gray-600 text-xs rounded-xl px-3 py-2.5 outline-none focus:border-white/10 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
                       </div>
-                    ) : (
-                      budgets.map((b) => {
-                        const spent = categoryData.find((c) => c.category === b.category)?.total || 0;
-                        const limit = Number(b.limit_amount);
-                        const percent = Math.min(100, Math.round((spent / limit) * 100));
+                      <button
+                        type="submit"
+                        className="w-full py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/35 text-indigo-400 text-xs font-semibold rounded-xl transition-all shadow-sm"
+                      >
+                        Set Limit
+                      </button>
+                    </form>
 
-                        let progressColor = 'bg-indigo-500';
-                        if (percent >= 100) progressColor = 'bg-red-500';
-                        else if (percent >= 80) progressColor = 'bg-amber-500';
+                    {/* Budgets List */}
+                    <div className="space-y-3.5 overflow-y-auto max-h-[220px] pr-1 min-h-[100px]">
+                      {budgets.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-6 text-center">
+                          <p className="text-gray-600 text-[11px]">No budgets configured yet</p>
+                        </div>
+                      ) : (
+                        budgets.map((b) => {
+                          const spent = categoryData.find((c) => c.category === b.category)?.total || 0;
+                          const limit = Number(b.limit_amount);
+                          const percent = Math.min(100, Math.round((spent / limit) * 100));
 
-                        return (
-                          <div key={b.id} className="space-y-1.5 group">
-                            <div className="flex items-center justify-between text-[11px] font-medium">
-                              <span className="text-gray-300">{b.category}</span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-gray-400">
-                                  ${spent.toFixed(0)} <span className="text-gray-600">/ ${limit.toFixed(0)}</span>
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteBudget(b.id)}
-                                  className="text-gray-600 hover:text-red-400 transition-colors duration-150 p-0.5"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
+                          let progressColor = 'bg-indigo-500';
+                          if (percent >= 100) progressColor = 'bg-red-500';
+                          else if (percent >= 80) progressColor = 'bg-amber-500';
+
+                          return (
+                            <div key={b.id} className="space-y-1 group">
+                              <div className="flex items-center justify-between text-[11px] font-medium">
+                                <span className="text-gray-300 truncate max-w-[100px]">{b.category}</span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-gray-400">
+                                    ${spent.toFixed(0)} <span className="text-gray-600">/ ${limit.toFixed(0)}</span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteBudget(b.id)}
+                                    className="text-gray-600 hover:text-red-400 transition-colors duration-150 p-0.5"
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="h-1 w-full bg-gray-800 rounded-full overflow-hidden border border-white/[0.02]">
+                                <div
+                                  className={`h-full ${progressColor} transition-all duration-500 rounded-full`}
+                                  style={{ width: `${percent}%` }}
+                                />
                               </div>
                             </div>
-                            <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden border border-white/[0.02]">
-                              <div
-                                className={`h-full ${progressColor} transition-all duration-500 rounded-full`}
-                                style={{ width: `${percent}%` }}
-                              />
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Savings Goals */}
+                <div className="bg-gray-900 border border-white/5 rounded-2xl flex flex-col">
+                  <SectionHeader title="Savings Goals" sub="Plan and track your goals" />
+                  <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between gap-4">
+                    {/* Create Goal Form */}
+                    <form onSubmit={handleCreateSavingsGoal} className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Goal Name"
+                          value={goalName}
+                          onChange={(e) => setGoalName(e.target.value)}
+                          className="bg-gray-800/60 border border-white/5 text-white placeholder-gray-600 text-xs rounded-xl px-3 py-2.5 outline-none focus:border-white/10 transition-all"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Target ($)"
+                          value={goalTarget}
+                          onChange={(e) => setGoalTarget(e.target.value)}
+                          className="bg-gray-800/60 border border-white/5 text-white placeholder-gray-600 text-xs rounded-xl px-3 py-2.5 outline-none focus:border-white/10 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="number"
+                          placeholder="Starting ($)"
+                          value={goalCurrent}
+                          onChange={(e) => setGoalCurrent(e.target.value)}
+                          className="bg-gray-800/60 border border-white/5 text-white placeholder-gray-600 text-xs rounded-xl px-3 py-2.5 outline-none focus:border-white/10 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <input
+                          type="date"
+                          value={goalDate}
+                          onChange={(e) => setGoalDate(e.target.value)}
+                          className="bg-gray-800/60 border border-white/5 text-gray-500 placeholder-gray-600 text-[10px] rounded-xl px-2.5 py-2.5 outline-none focus:border-white/10 transition-all cursor-pointer"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="w-full py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/35 text-indigo-400 text-xs font-semibold rounded-xl transition-all shadow-sm"
+                      >
+                        Create Goal
+                      </button>
+                    </form>
+
+                    {/* Savings Goals List */}
+                    <div className="space-y-3.5 overflow-y-auto max-h-[220px] pr-1 min-h-[100px]">
+                      {savings.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-6 text-center">
+                          <p className="text-gray-600 text-[11px]">No savings goals configured yet</p>
+                        </div>
+                      ) : (
+                        savings.map((s) => {
+                          const current = Number(s.current_amount);
+                          const target = Number(s.target_amount);
+                          const percent = Math.min(100, Math.round((current / target) * 100));
+                          const formattedDate = s.target_date
+                            ? new Date(s.target_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', timeZone: 'UTC' })
+                            : null;
+
+                          return (
+                            <div key={s.id} className="space-y-1.5 group">
+                              <div className="flex items-center justify-between text-[11px] font-medium">
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-gray-300 truncate font-semibold">{s.name}</span>
+                                  {formattedDate && (
+                                    <span className="text-gray-600 text-[9px] flex items-center gap-0.5 mt-0.5">
+                                      <Calendar size={8} /> {formattedDate}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <span className="text-gray-400">
+                                    ${current.toFixed(0)} <span className="text-gray-600">/ ${target.toFixed(0)}</span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setContributeOpenId(contributeOpenId === s.id ? null : s.id)}
+                                    className="text-indigo-400 hover:text-indigo-300 transition-colors p-0.5"
+                                    title="Contribute funds"
+                                  >
+                                    <Plus size={12} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteSavingsGoal(s.id)}
+                                    className="text-gray-600 hover:text-red-400 transition-colors duration-150 p-0.5"
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Contribution inline form */}
+                              {contributeOpenId === s.id && (
+                                <div className="flex gap-1.5 py-1">
+                                  <input
+                                    type="number"
+                                    placeholder="Amount ($)"
+                                    value={contributeAmount[s.id] || ''}
+                                    onChange={(e) =>
+                                      setContributeAmount({
+                                        ...contributeAmount,
+                                        [s.id]: e.target.value,
+                                      })
+                                    }
+                                    className="flex-1 bg-gray-800 border border-white/5 text-white placeholder-gray-600 text-[10px] rounded-lg px-2 py-1 outline-none focus:border-white/10"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleContribute(s.id, current)}
+                                    className="px-2.5 py-1 bg-indigo-650 hover:bg-indigo-600 text-white text-[10px] font-semibold rounded-lg transition-all"
+                                  >
+                                    Save
+                                  </button>
+                                </div>
+                              )}
+
+                              <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden border border-white/[0.02]">
+                                <div
+                                  className="h-full bg-emerald-500 transition-all duration-500 rounded-full"
+                                  style={{ width: `${percent}%` }}
+                                />
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })
-                    )}
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
