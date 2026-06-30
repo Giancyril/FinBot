@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
+import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, ShoppingBag, Download } from 'lucide-react';
 import CustomSelectDropdown from './CustomSelectDropdown';
 
 const CATEGORIES = ['Food and Drink', 'Shops', 'Travel', 'Service', 'Recreation', 'Transfer', 'Payment'];
@@ -25,6 +25,35 @@ export default function TransactionList({ refreshTrigger }) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const params = { limit: 1000, search: search.trim() || undefined, category: category || undefined };
+      const { data } = await axios.get('/api/transactions', { params });
+      const txs = data.transactions || [];
+
+      const headers = ['Date', 'Merchant/Description', 'Category', 'Amount', 'Type'];
+      const rows = txs.map(t => {
+        const date = new Date(t.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+        const name = t.merchant_name || t.name;
+        const amount = Math.abs(t.amount).toFixed(2);
+        const type = t.amount > 0 ? 'Debit' : 'Credit';
+        return [date, `"${name.replace(/"/g, '""')}"`, t.category || 'Other', amount, type];
+      });
+
+      const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `transactions_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('CSV export failed:', err);
     }
   };
 
@@ -53,6 +82,15 @@ export default function TransactionList({ refreshTrigger }) {
           icon={SlidersHorizontal}
           className="w-full sm:w-48"
         />
+
+        <button
+          type="button"
+          onClick={handleExportCSV}
+          className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gray-800/60 hover:bg-gray-850 border border-white/5 hover:border-white/10 text-gray-350 hover:text-white text-xs font-semibold rounded-xl transition-all shrink-0"
+          title="Export to CSV"
+        >
+          <Download size={13} /> <span className="sm:hidden md:inline">Export</span>
+        </button>
       </div>
 
       {/* Table Container with Min-Height to prevent shaking/collapsing */}
