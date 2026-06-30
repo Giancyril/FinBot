@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePlaidLink } from 'react-plaid-link';
 import axios from 'axios';
-import { Link2, CheckCircle, RefreshCw } from 'lucide-react';
+import { Link2, CheckCircle, RefreshCw, AlertCircle } from 'lucide-react';
 
 export default function PlaidLink({ onSyncComplete }) {
   const [linkToken, setLinkToken] = useState(null);
@@ -11,111 +11,69 @@ export default function PlaidLink({ onSyncComplete }) {
   const [institution, setInstitution] = useState('');
   const [error, setError] = useState('');
 
-  // 1. Fetch link token from backend on mount or when connection reset
   const fetchLinkToken = async () => {
     try {
       setLoading(true);
       const response = await axios.post('/api/plaid/create-link-token');
       setLinkToken(response.data.link_token);
     } catch (err) {
-      console.error('Error fetching link token:', err);
-      setError('Could not initialize bank link connection.');
+      setError('Could not initialize bank connection.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchLinkToken();
-  }, []);
+  useEffect(() => { fetchLinkToken(); }, []);
 
-  // 2. Exchange token after user finishes bank authentication in Plaid Link widget
   const onSuccess = async (public_token, metadata) => {
     const institutionName = metadata.institution?.name || 'Sandbox Bank';
     setInstitution(institutionName);
-    setSyncing(true);
-    setError('');
-
+    setSyncing(true); setError('');
     try {
-      // Exchange token
-      await axios.post('/api/plaid/exchange-token', {
-        public_token,
-        institution_name: institutionName,
-      });
-
+      await axios.post('/api/plaid/exchange-token', { public_token, institution_name: institutionName });
       setConnected(true);
-      
-      // Auto-trigger sync on first connect
       await axios.post('/api/transactions/sync');
-      
-      if (onSyncComplete) {
-        onSyncComplete();
-      }
+      if (onSyncComplete) onSyncComplete();
     } catch (err) {
-      console.error('Token exchange or sync error:', err);
-      setError('Token exchange or transaction sync failed.');
+      setError('Token exchange or sync failed.');
     } finally {
       setSyncing(false);
     }
   };
 
-  const onExit = (err, metadata) => {
-    if (err) {
-      console.error('Plaid Link exited with error:', err);
-      setError(err.message || 'Plaid Link connection aborted.');
-    }
-  };
+  const { open, ready } = usePlaidLink({ token: linkToken, onSuccess, onExit: (err) => { if (err) setError(err.message); } });
 
-  const config = {
-    token: linkToken,
-    onSuccess,
-    onExit,
-  };
+  if (syncing) return (
+    <div className="flex items-center gap-3 p-3 bg-indigo-500/5 border border-indigo-500/20 rounded-xl">
+      <RefreshCw size={14} className="text-indigo-400 animate-spin shrink-0" />
+      <span className="text-indigo-400 text-xs font-medium">Syncing transactions...</span>
+    </div>
+  );
 
-  const { open, ready } = usePlaidLink(config);
-
-  if (syncing) {
-    return (
-      <div className="flex items-center gap-3 p-4 bg-indigo-500/10 border border-indigo-500/25 rounded-xl">
-        <RefreshCw className="w-5 h-5 text-indigo-400 animate-spin" />
-        <span className="text-sm font-semibold text-indigo-300">Synchronizing transaction history...</span>
+  if (connected) return (
+    <div className="flex items-center justify-between p-3 bg-emerald-400/5 border border-emerald-400/20 rounded-xl">
+      <div className="flex items-center gap-2 text-emerald-400">
+        <CheckCircle size={14} />
+        <span className="text-xs font-semibold">Connected to {institution}</span>
       </div>
-    );
-  }
-
-  if (connected) {
-    return (
-      <div className="flex items-center justify-between p-4 bg-emerald-500/10 border border-emerald-500/25 rounded-xl">
-        <div className="flex items-center gap-2 text-emerald-400">
-          <CheckCircle className="w-5 h-5" />
-          <span className="text-sm font-semibold">Connected to {institution}</span>
-        </div>
-        <button
-          onClick={() => {
-            setConnected(false);
-            fetchLinkToken();
-          }}
-          className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
-        >
-          Link Another Bank
-        </button>
-      </div>
-    );
-  }
+      <button onClick={() => { setConnected(false); fetchLinkToken(); }}
+        className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
+        + Add Another
+      </button>
+    </div>
+  );
 
   return (
-    <div className="flex flex-col gap-2">
-      <button
-        onClick={() => open()}
-        disabled={!ready || loading}
-        className="btn btn-accent w-full py-3"
-      >
-        <Link2 className="w-4 h-4" />
-        <span>{loading ? 'Initializing Plaid...' : 'Connect Bank Account'}</span>
+    <div className="space-y-2">
+      <button onClick={() => open()} disabled={!ready || loading}
+        className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-400/10 hover:bg-emerald-400/15 border border-emerald-400/20 hover:border-emerald-400/40 text-emerald-400 text-sm font-semibold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+        <Link2 size={14} />
+        <span>{loading ? 'Initializing...' : 'Connect Bank Account'}</span>
       </button>
-      
       {error && (
-        <span className="text-xs text-red-400 font-medium text-center">{error}</span>
+        <div className="flex items-center gap-2 text-red-400 text-[11px]">
+          <AlertCircle size={11} /> <span>{error}</span>
+        </div>
       )}
     </div>
   );

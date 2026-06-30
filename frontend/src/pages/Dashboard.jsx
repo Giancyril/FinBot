@@ -1,235 +1,285 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import PlaidLink from '../components/PlaidLink';
+import TransactionList from '../components/TransactionList';
 import CategoryBarChart from '../components/charts/CategoryBarChart';
 import SpendingLineChart from '../components/charts/SpendingLineChart';
-import TransactionList from '../components/TransactionList';
 import {
-  Wallet,
-  TrendingUp,
-  MessageSquareCode,
-  DollarSign,
-  Calendar,
-  AlertCircle,
-  LogOut,
-  RefreshCw
+  Wallet, MessageSquare, LogOut, RefreshCw, DollarSign,
+  TrendingUp, Receipt, ShoppingBag, ArrowRight, Bot,
+  LayoutDashboard, ChevronDown, Sparkles,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+const StatCard = ({ label, value, sub, icon, accent, subColor }) => (
+  <div className={`relative bg-gray-900 border border-white/5 rounded-2xl p-4 flex flex-col gap-2.5 overflow-hidden`}>
+    <div className={`absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-300 ${accent} blur-3xl scale-150 pointer-events-none`} />
+    <div className="relative flex items-start justify-between">
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${accent} bg-opacity-10`}>{icon}</div>
+    </div>
+    <div className="relative">
+      <p className="text-2xl font-bold text-white tracking-tight">{value}</p>
+      <p className="text-gray-500 text-[11px] mt-0.5 font-medium">{label}</p>
+      {sub && <p className={`text-[10px] mt-1 font-medium ${subColor ?? 'text-gray-600'}`}>{sub}</p>}
+    </div>
+  </div>
+);
+
+const SectionHeader = ({ title, sub, action }) => (
+  <div className="flex items-center justify-between px-4 sm:px-5 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-white/5">
+    <div>
+      <h3 className="text-white text-sm font-semibold">{title}</h3>
+      {sub && <p className="text-gray-500 text-xs mt-0.5">{sub}</p>}
+    </div>
+    {action}
+  </div>
+);
+
+// ── Main Dashboard ────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
-  const [summaryData, setSummaryData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [syncing, setSyncing] = useState(false);
-  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  const fetchSummary = async () => {
+  const [summary, setSummary] = useState(null);
+  const [categoryData, setCategoryData] = useState([]);
+  const [trendData, setTrendData] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
+
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError('');
-      const response = await axios.get('/api/transactions/summary');
-      if (response.data) {
-        setSummaryData(response.data);
-      }
+      const [sumRes, catRes, trendRes] = await Promise.all([
+        axios.get('/api/transactions/summary'),
+        axios.get('/api/transactions/by-category'),
+        axios.get('/api/transactions/daily-trend'),
+      ]);
+      setSummary(sumRes.data);
+      setCategoryData(catRes.data || []);
+      setTrendData(trendRes.data || []);
     } catch (err) {
-      console.error('Failed to load transaction summary:', err);
-      // Suppress full error if it's just 404 because no bank is connected yet
-      if (err.response?.status !== 404) {
-        setError('Failed to fetch dashboard metrics.');
-      }
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchSummary();
-  }, [refreshTrigger]);
-
   const handleSync = async () => {
+    setSyncing(true);
     try {
-      setSyncing(true);
-      setError('');
       await axios.post('/api/transactions/sync');
-      setRefreshTrigger(prev => prev + 1);
+      setRefreshKey(k => k + 1);
+      await fetchData();
     } catch (err) {
-      console.error('Sync failed:', err);
-      setError('Failed to sync bank transactions.');
+      console.error(err);
     } finally {
       setSyncing(false);
     }
   };
 
-  const handleLinkComplete = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
+  const handleLogout = async () => { await logout(); navigate('/login'); };
 
-  const totalSpent = Number(summaryData?.summary?.total_spent || 0);
-  const transactionCount = parseInt(summaryData?.summary?.transaction_count || 0);
-  const biggestTx = Number(summaryData?.summary?.biggest_transaction || 0);
-  const topCategory = summaryData?.by_category?.[0]?.category || 'N/A';
+  useEffect(() => { fetchData(); }, []);
+
+  if (loading) return (
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+          <Wallet size={18} className="text-indigo-400" />
+        </div>
+        <div className="w-5 h-5 border-2 border-indigo-400/40 border-t-indigo-400 rounded-full animate-spin" />
+        <p className="text-gray-600 text-xs">Loading dashboard...</p>
+      </div>
+    </div>
+  );
+
+  const topCat = categoryData[0];
+  const biggestTx = summary?.biggest_transaction;
 
   return (
-    <div className="min-h-screen bg-[#07080d] flex flex-col relative overflow-hidden pb-12">
-      {/* Decorative Blur Backgrounds */}
-      <div className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-indigo-900/5 rounded-full blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-purple-900/5 rounded-full blur-[120px] pointer-events-none"></div>
-
-      {/* Header bar */}
-      <header className="glass-card rounded-none border-t-0 border-x-0 py-4 px-6 flex items-center justify-between z-10">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-md">
-            <Wallet className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-lg font-bold bg-gradient-to-r from-white via-slate-100 to-indigo-300 bg-clip-text text-transparent">
-            FinAI Dashboard
-          </span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-slate-400 font-medium hidden sm:inline">
-            Active: <strong className="text-slate-200">{user?.email}</strong>
-          </span>
-          <button
-            onClick={logout}
-            className="text-xs bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all duration-200"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Logout</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Main dashboard content container */}
-      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 mt-6 z-10 flex flex-col gap-6">
-        
-        {/* Top welcome row */}
-        <section className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-100 tracking-tight">Financial Overview</h1>
-            <p className="text-sm text-slate-400 mt-1">Review spending breakdowns or talk to your AI assistant.</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {summaryData && (
-              <button
-                onClick={handleSync}
-                disabled={syncing}
-                className="btn btn-secondary py-2 px-4 text-sm"
-              >
-                <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-                <span>{syncing ? 'Syncing...' : 'Sync Transactions'}</span>
-              </button>
-            )}
-            <Link to="/chat" className="btn btn-primary py-2 px-4 text-sm flex items-center gap-2">
-              <MessageSquareCode className="w-4 h-4" />
-              <span>Ask AI Chat</span>
-            </Link>
-          </div>
-        </section>
-
-        {error && (
-          <div className="p-3.5 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-xl flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {/* Check if Plaid is connected: If not, display connection banner */}
-        {!summaryData?.by_category || summaryData.by_category.length === 0 ? (
-          <section className="glass-card p-8 flex flex-col items-center justify-center text-center max-w-xl mx-auto mt-6">
-            <TrendingUp className="w-12 h-12 text-indigo-400/80 mb-3" />
-            <h2 className="text-xl font-bold text-slate-200">Connect Your Bank Account</h2>
-            <p className="text-sm text-slate-400 mt-1.5 mb-6 max-w-sm">
-              We sync transactions securely using Plaid sandbox. Complete link setup to view metrics and unlock chat.
-            </p>
-            <div className="w-full max-w-xs">
-              <PlaidLink onSyncComplete={handleLinkComplete} />
+    <div className="min-h-screen bg-gray-950">
+      {/* ── Navbar ── */}
+      <nav className="bg-gray-900/85 backdrop-blur-md border-b border-white/5 sticky top-0 z-30 transition-all">
+        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-10 h-16 flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/10">
+              <Wallet size={15} className="text-white" />
             </div>
-          </section>
-        ) : (
+            <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              FinAI
+            </span>
+          </div>
+
+          {/* Tabs */}
+          <div className="hidden sm:flex items-center gap-1 bg-gray-950/50 border border-white/5 rounded-xl p-1">
+            {[
+              { key: 'overview', label: 'Overview', icon: <LayoutDashboard size={12} /> },
+              { key: 'transactions', label: 'Transactions', icon: <Receipt size={12} /> },
+            ].map(tab => (
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${activeTab === tab.key ? 'bg-gray-800 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}>
+                {tab.icon} {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2">
+            <Link to="/chat"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/35 text-indigo-400 text-xs font-semibold rounded-xl transition-all shadow-sm">
+              <Bot size={12} /> <span className="hidden sm:inline">Ask AI</span>
+            </Link>
+            <button onClick={handleSync} disabled={syncing}
+              className="w-9 h-9 flex items-center justify-center bg-gray-800/40 border border-white/5 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-40">
+              <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
+            </button>
+            <button onClick={handleLogout}
+              className="w-9 h-9 flex items-center justify-center bg-gray-800/40 border border-white/5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-400/5 transition-all">
+              <LogOut size={12} />
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <div className="w-full px-4 sm:px-6 md:px-8 lg:px-10 py-5 sm:py-6 space-y-4 sm:space-y-5">
+
+        {/* ── Welcome Banner ── */}
+        <div className="relative bg-gray-900 border border-white/5 rounded-2xl p-4 sm:p-5 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-transparent to-transparent pointer-events-none" />
+          <div className="absolute -top-8 -right-8 w-40 h-40 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                Good to see you{user?.email ? `, ${user.email.split('@')[0]}` : ''}!
+              </h2>
+              <p className="text-gray-500 text-xs sm:text-sm mt-0.5">Here's your financial overview for this period.</p>
+            </div>
+            <PlaidLink onSyncComplete={() => { setRefreshKey(k => k + 1); fetchData(); }} />
+          </div>
+        </div>
+
+        {/* ── Stat Cards ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard
+            label="Total Spent" value={summary?.total_spent != null ? `$${Number(summary.total_spent).toFixed(2)}` : '—'}
+            sub={`${summary?.transaction_count ?? 0} transactions`} subColor="text-indigo-400"
+            icon={<DollarSign size={14} className="text-indigo-400" />} accent="bg-indigo-500/5" />
+          <StatCard
+            label="Avg per Transaction" value={summary?.avg_transaction != null ? `$${Number(summary.avg_transaction).toFixed(2)}` : '—'}
+            sub="per purchase" subColor="text-cyan-400"
+            icon={<TrendingUp size={14} className="text-cyan-400" />} accent="bg-cyan-500/5" />
+          <StatCard
+            label="Top Category" value={topCat?.category ?? '—'}
+            sub={topCat ? `$${Number(topCat.total).toFixed(2)} spent` : 'No data'} subColor="text-violet-400"
+            icon={<ShoppingBag size={14} className="text-violet-400" />} accent="bg-violet-500/5" />
+          <StatCard
+            label="Biggest Transaction" value={biggestTx ? `$${Number(biggestTx.amount).toFixed(2)}` : '—'}
+            sub={biggestTx?.merchant_name || biggestTx?.name || 'N/A'} subColor="text-amber-400"
+            icon={<Receipt size={14} className="text-amber-400" />} accent="bg-amber-500/5" />
+        </div>
+
+        {activeTab === 'overview' ? (
           <>
-            {/* Summary Cards Grid */}
-            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              
-              <div className="glass-card flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-400">
-                  <DollarSign className="w-6 h-6" />
+            {/* ── Charts Row ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+              {/* Category breakdown */}
+              <div className="bg-gray-900 border border-white/5 rounded-2xl flex flex-col">
+                <SectionHeader title="Spending by Category" sub="Where your money goes" />
+                <div className="p-4 sm:p-5">
+                  <div className="h-52">
+                    <CategoryBarChart data={categoryData} />
+                  </div>
+                  {/* Category legend pills */}
+                  {categoryData.length > 0 && (
+                    <div className="mt-4 grid grid-cols-2 gap-1.5">
+                      {categoryData.slice(0, 4).map((c, i) => {
+                        const colors = ['text-indigo-400 bg-indigo-400/10 border-indigo-400/20', 'text-violet-400 bg-violet-400/10 border-violet-400/20', 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20', 'text-amber-400 bg-amber-400/10 border-amber-400/20'];
+                        return (
+                          <div key={c.category} className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl border text-[11px] font-medium ${colors[i]}`}>
+                            <span className="truncate">{c.category}</span>
+                            <span className="ml-2 font-bold shrink-0">${Number(c.total).toFixed(0)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Spending trend */}
+              <div className="bg-gray-900 border border-white/5 rounded-2xl flex flex-col">
+                <SectionHeader title="Cumulative Spending" sub="Daily running total this period"
+                  action={<span className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />Live</span>} />
+                <div className="p-4 sm:p-5">
+                  <div className="h-52">
+                    <SpendingLineChart data={trendData} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Recent Transactions ── */}
+            <div className="bg-gray-900 border border-white/5 rounded-2xl">
+              <SectionHeader title="Recent Transactions" sub="Latest 10 transactions"
+                action={
+                  <button onClick={() => setActiveTab('transactions')}
+                    className="flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+                    View all <ArrowRight size={10} />
+                  </button>
+                } />
+              <div className="p-4 sm:p-5">
+                <TransactionList refreshTrigger={refreshKey} />
+              </div>
+            </div>
+
+            {/* ── AI Chat CTA ── */}
+            <Link to="/chat"
+              className="group flex items-center justify-between bg-gray-900 border border-white/5 hover:border-indigo-500/20 rounded-2xl p-4 sm:p-5 transition-all">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                  <Sparkles size={16} className="text-indigo-400" />
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400 block font-medium">Total Spending</span>
-                  <strong className="text-xl text-slate-100">${totalSpent.toFixed(2)}</strong>
+                  <p className="text-white text-sm font-semibold">Ask AI about your finances</p>
+                  <p className="text-gray-500 text-xs mt-0.5">"How much did I spend on food this month?"</p>
                 </div>
               </div>
-
-              <div className="glass-card flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-purple-500/10 text-purple-400">
-                  <TrendingUp className="w-6 h-6" />
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400 block font-medium">Top Category</span>
-                  <strong className="text-xl text-slate-100 truncate max-w-[150px] block">{topCategory}</strong>
-                </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold rounded-xl">
+                  <Bot size={12} /> Chat with AI
+                </span>
+                <ArrowRight size={14} className="text-gray-600 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
               </div>
-
-              <div className="glass-card flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400">
-                  <Calendar className="w-6 h-6" />
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400 block font-medium">Transaction Count</span>
-                  <strong className="text-xl text-slate-100">{transactionCount} tx</strong>
-                </div>
-              </div>
-
-              <div className="glass-card flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400">
-                  <DollarSign className="w-6 h-6" />
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400 block font-medium">Biggest Tx</span>
-                  <strong className="text-xl text-slate-100">${biggestTx.toFixed(2)}</strong>
-                </div>
-              </div>
-
-            </section>
-
-            {/* Charts Grid */}
-            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              
-              <div className="glass-card flex flex-col gap-4 h-[350px]">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-200">Spending by Category</h3>
-                  <p className="text-xs text-slate-400">Top cost distributions in this period</p>
-                </div>
-                <div className="flex-1 min-h-0">
-                  <CategoryBarChart data={summaryData.by_category} />
-                </div>
-              </div>
-
-              <div className="glass-card flex flex-col gap-4 h-[350px]">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-200">Spending Trend Over Time</h3>
-                  <p className="text-xs text-slate-400">Cumulative day-over-day tracking</p>
-                </div>
-                <div className="flex-1 min-h-0">
-                  <SpendingLineChart data={summaryData.daily_spending} />
-                </div>
-              </div>
-
-            </section>
-
-            {/* Detailed Transactions List */}
-            <section className="glass-card flex flex-col gap-4">
-              <div>
-                <h3 className="text-sm font-bold text-slate-200">Recent Transactions</h3>
-                <p className="text-xs text-slate-400">Detailed list of bank synced items</p>
-              </div>
-              <TransactionList refreshTrigger={refreshTrigger} />
-            </section>
+            </Link>
           </>
+        ) : (
+          /* ── Transactions Tab ── */
+          <div className="bg-gray-900 border border-white/5 rounded-2xl">
+            <SectionHeader title="All Transactions" sub="Search, filter and browse your transaction history"
+              action={
+                <button onClick={() => setActiveTab('overview')}
+                  className="text-[11px] text-gray-500 hover:text-gray-300 font-medium transition-colors">
+                  ← Back
+                </button>
+              } />
+            <div className="p-4 sm:p-5">
+              <TransactionList refreshTrigger={refreshKey} />
+            </div>
+          </div>
         )}
-      </main>
+
+        {/* Footer */}
+        <div className="flex items-center justify-center py-2">
+          <p className="text-[10px] text-gray-700">FinAI · Powered by Gemini · Plaid Sandbox</p>
+        </div>
+      </div>
     </div>
   );
 }

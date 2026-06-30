@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { UserPlus, Mail, Lock, Wallet } from 'lucide-react';
+import { UserPlus, Mail, Lock, Wallet, AlertCircle } from 'lucide-react';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
@@ -16,11 +16,9 @@ export default function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password || !confirmPassword) return setErr('Please fill in all fields.');
-    if (password.length < 8) return setErr('Password must be at least 8 characters long.');
+    if (password.length < 8) return setErr('Password must be at least 8 characters.');
     if (password !== confirmPassword) return setErr('Passwords do not match.');
-
-    setLoading(true);
-    setErr('');
+    setLoading(true); setErr('');
     try {
       await signup(email, password);
       navigate('/');
@@ -32,103 +30,72 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-[#07080d] flex items-center justify-center px-4 relative overflow-hidden">
-      {/* Background Decorative Gradients */}
-      <div className="absolute top-[-10%] left-[-10%] w-[45vw] h-[45vw] bg-indigo-900/10 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[45vw] h-[45vw] bg-purple-900/10 rounded-full blur-[100px] pointer-events-none"></div>
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-violet-500/5 rounded-full blur-[100px] pointer-events-none" />
 
-      <div className="w-full max-w-md">
-        <div className="flex justify-center items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <Wallet className="w-6 h-6 text-white" />
+      <div className="relative w-full max-w-sm">
+        <div className="flex items-center justify-center gap-2.5 mb-8">
+          <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+            <Wallet size={18} className="text-indigo-400" />
           </div>
-          <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-indigo-300 bg-clip-text text-transparent">
-            FinAI Assistant
-          </span>
+          <span className="text-base font-bold text-white tracking-tight">FinAI Assistant</span>
         </div>
 
-        <div className="glass-card shadow-2xl">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-slate-100">Create Account</h2>
-            <p className="text-sm text-slate-400 mt-1">Get started tracking your finances with smart AI assistance.</p>
+        <div className="bg-gray-900 border border-white/5 rounded-2xl p-6">
+          <div className="mb-5">
+            <h1 className="text-lg font-bold text-white">Create account</h1>
+            <p className="text-gray-500 text-xs mt-0.5">Start managing your finances with AI</p>
           </div>
 
           {err && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-lg flex items-center">
+            <div className="flex items-center gap-2 p-3 mb-4 bg-red-400/10 border border-red-400/20 rounded-xl text-red-400 text-xs">
+              <AlertCircle size={13} className="shrink-0" />
               <span>{err}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                Email Address
-              </label>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="email"
-                  required
-                  placeholder="name@example.com"
-                  className="form-input pl-10"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+                <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
+                <input type="email" required placeholder="name@example.com"
+                  value={email} onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-gray-800/60 border border-white/5 text-white placeholder-gray-600 text-sm rounded-xl pl-9 pr-3 py-2.5 outline-none focus:border-indigo-500/50 focus:bg-gray-800 transition-all" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Password</label>
+              <div className="relative">
+                <Lock size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
+                <input type="password" required placeholder="Min. 8 characters"
+                  value={password} onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-gray-800/60 border border-white/5 text-white placeholder-gray-600 text-sm rounded-xl pl-9 pr-3 py-2.5 outline-none focus:border-indigo-500/50 focus:bg-gray-800 transition-all" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Confirm Password</label>
+              <div className="relative">
+                <Lock size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
+                <input type="password" required placeholder="Re-enter password"
+                  value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full bg-gray-800/60 border border-white/5 text-white placeholder-gray-600 text-sm rounded-xl pl-9 pr-3 py-2.5 outline-none focus:border-indigo-500/50 focus:bg-gray-800 transition-all" />
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="password"
-                  required
-                  placeholder="At least 8 characters"
-                  className="form-input pl-10"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="password"
-                  required
-                  placeholder="Re-enter password"
-                  className="form-input pl-10"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <button type="submit" disabled={loading} className="btn btn-primary w-full mt-6 py-3">
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <>
-                  <UserPlus className="w-4 h-4" />
-                  <span>Create Account</span>
-                </>
-              )}
+            <button type="submit" disabled={loading}
+              className="w-full mt-2 flex items-center justify-center gap-2 py-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/40 text-indigo-400 text-sm font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+              {loading
+                ? <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                : <><UserPlus size={14} /><span>Create Account</span></>
+              }
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-xs text-slate-400">
+          <div className="mt-4 pt-4 border-t border-white/5 text-center">
+            <p className="text-xs text-gray-600">
               Already have an account?{' '}
-              <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
-                Sign In
-              </Link>
+              <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">Sign In</Link>
             </p>
           </div>
         </div>

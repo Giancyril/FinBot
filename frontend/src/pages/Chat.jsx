@@ -33,9 +33,9 @@ function renderMarkdown(text) {
   formatted = formatted.replace(/^\s*-\s+(.*?)$/gm, '<li class="ml-4 list-disc">$1</li>');
   
   // Inline Code
-  formatted = formatted.replace(/`(.*?)`/g, '<code class="bg-black/30 px-1 py-0.5 rounded text-indigo-300 text-xs font-mono">$1</code>');
+  formatted = formatted.replace(/`(.*?)`/g, '<code class="bg-black/40 px-1.5 py-0.5 rounded text-indigo-300 text-[11px] font-mono">$1</code>');
 
-  return <div className="markdown-body space-y-2" dangerouslySetInnerHTML={{ __html: formatted }} />;
+  return <div className="space-y-1.5 text-xs sm:text-sm" dangerouslySetInnerHTML={{ __html: formatted }} />;
 }
 
 export default function Chat() {
@@ -65,46 +65,46 @@ export default function Chat() {
   };
 
   return (
-    <div className="min-h-screen bg-[#07080d] flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-gray-950 flex flex-col relative overflow-hidden">
       {/* Background Gradients */}
-      <div className="absolute top-0 right-0 w-[30vw] h-[30vw] bg-indigo-900/10 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-[30vw] h-[30vw] bg-purple-900/10 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-violet-500/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header */}
-      <header className="glass-card rounded-none border-t-0 border-x-0 py-4 px-6 flex items-center justify-between z-10">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="text-slate-400 hover:text-slate-200 transition-colors">
-            <ArrowLeft className="w-5 h-5" />
+      <header className="bg-gray-900 border-b border-white/5 py-3 px-4 sm:px-6 flex items-center justify-between z-10">
+        <div className="flex items-center gap-3">
+          <Link to="/" className="w-8 h-8 flex items-center justify-center bg-gray-800/60 border border-white/5 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+            <ArrowLeft className="w-4 h-4" />
           </Link>
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-md">
-              <Bot className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+              <Bot className="w-4.5 h-4.5 text-indigo-400" />
             </div>
             <div>
-              <h1 className="text-base font-bold text-slate-100 flex items-center gap-1.5">
+              <h1 className="text-sm font-bold text-white flex items-center gap-1.5">
                 FinAI Assistant
-                <span className="flex h-2 w-2 relative">
+                <span className="flex h-1.5 w-1.5 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                 </span>
               </h1>
-              <p className="text-xs text-slate-400">Powered by Google Gemini</p>
+              <p className="text-[10px] text-gray-500">Powered by Google Gemini</p>
             </div>
           </div>
         </div>
-        <div className="text-xs text-slate-400 font-medium bg-slate-800/40 px-3 py-1.5 rounded-full border border-slate-700/50">
-          Logged in as <span className="text-indigo-300 font-semibold">{user?.email}</span>
+        <div className="text-[10px] sm:text-xs text-gray-400 font-medium bg-gray-800/60 px-3 py-1.5 rounded-xl border border-white/5">
+          Logged in as <span className="text-indigo-400 font-semibold">{user?.email}</span>
         </div>
       </header>
 
       {/* Main Chat Layout */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden max-w-7xl w-full mx-auto p-4 gap-4 z-10">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden max-w-7xl w-full mx-auto p-3 sm:p-4 gap-3 sm:gap-4 z-10">
         
         {/* Recommended Prompts sidebar */}
         <aside className="w-full md:w-64 flex flex-col gap-3 md:h-full md:overflow-y-auto">
-          <div className="glass-card p-4 flex flex-col gap-3">
-            <h3 className="text-sm font-bold text-slate-200 flex items-center gap-1.5 mb-1">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
+          <div className="bg-gray-900 border border-white/5 rounded-2xl p-4 flex flex-col gap-3">
+            <h3 className="text-xs font-bold text-white flex items-center gap-1.5 mb-0.5">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
               Suggested Prompts
             </h3>
             <div className="flex flex-wrap md:flex-col gap-2">
@@ -113,7 +113,7 @@ export default function Chat() {
                   key={idx}
                   onClick={() => handleChipClick(chip)}
                   disabled={loading}
-                  className="text-left text-xs bg-slate-800/50 hover:bg-slate-800 border border-slate-700/30 hover:border-slate-600/80 text-slate-300 hover:text-white px-3 py-2.5 rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-50"
+                  className="text-left text-xs bg-gray-800/40 hover:bg-gray-800/80 border border-white/5 hover:border-white/10 text-gray-300 hover:text-white px-3 py-2.5 rounded-xl transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {chip}
                 </button>
@@ -123,15 +123,17 @@ export default function Chat() {
         </aside>
 
         {/* Message Window Area */}
-        <main className="flex-1 flex flex-col glass-card p-0 overflow-hidden relative">
+        <main className="flex-1 flex flex-col bg-gray-900 border border-white/5 rounded-2xl overflow-hidden relative">
           
           {/* Messages list */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
             {messages.length === 0 && !streamingMessage && (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                <MessageSquare className="w-12 h-12 text-slate-600 mb-3" />
-                <h2 className="text-lg font-bold text-slate-300">Start Your Finance Q&A</h2>
-                <p className="text-sm text-slate-400 max-w-sm mt-1">
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 my-auto">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-center text-indigo-400 mb-4">
+                  <MessageSquare className="w-6 h-6" />
+                </div>
+                <h2 className="text-sm sm:text-base font-bold text-white">Start Your Finance Q&A</h2>
+                <p className="text-xs text-gray-500 max-w-xs mt-1 leading-relaxed">
                   Ask questions about your transactions, request spending reports, or ask how you can cut budgets.
                 </p>
               </div>
@@ -140,25 +142,25 @@ export default function Chat() {
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex gap-3.5 max-w-[85%] ${
+                className={`flex gap-3 max-w-[85%] ${
                   msg.role === 'user' ? 'ml-auto flex-row-reverse' : 'mr-auto'
                 }`}
               >
                 <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-md ${
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
                     msg.role === 'user'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gradient-to-tr from-indigo-500 to-purple-600 text-white'
+                      ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+                      : 'bg-gray-800 border-white/5 text-gray-400'
                   }`}
                 >
                   {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                 </div>
 
                 <div
-                  className={`p-4 rounded-2xl shadow-sm text-sm leading-relaxed ${
+                  className={`p-3.5 rounded-2xl text-sm leading-relaxed ${
                     msg.role === 'user'
-                      ? 'bg-indigo-500/10 border border-indigo-500/20 text-slate-100 rounded-tr-none'
-                      : 'bg-slate-800/40 border border-slate-700/30 text-slate-200 rounded-tl-none'
+                      ? 'bg-indigo-500/10 border border-indigo-500/20 text-white rounded-tr-none'
+                      : 'bg-gray-800/40 border border-white/5 text-gray-200 rounded-tl-none'
                   }`}
                 >
                   {renderMarkdown(msg.content)}
@@ -168,19 +170,19 @@ export default function Chat() {
 
             {/* Live Streaming Message Bubble */}
             {streamingMessage && (
-              <div className="flex gap-3.5 max-w-[85%] mr-auto">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white shrink-0 shadow-md">
+              <div className="flex gap-3 max-w-[85%] mr-auto">
+                <div className="w-8 h-8 rounded-xl bg-gray-800 border border-white/5 flex items-center justify-center text-gray-400 shrink-0">
                   <Bot className="w-4 h-4" />
                 </div>
-                <div className="p-4 bg-slate-800/40 border border-slate-700/30 text-slate-200 rounded-2xl rounded-tl-none shadow-sm text-sm leading-relaxed">
+                <div className="p-3.5 bg-gray-800/40 border border-white/5 text-gray-200 rounded-2xl rounded-tl-none text-sm leading-relaxed">
                   {renderMarkdown(streamingMessage)}
-                  <span className="inline-block w-2 h-4 bg-indigo-400 animate-pulse ml-1 align-middle rounded-full"></span>
+                  <span className="inline-block w-1.5 h-3 bg-indigo-400 animate-pulse ml-1 align-middle rounded-full"></span>
                 </div>
               </div>
             )}
 
             {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-lg max-w-md mx-auto text-center">
+              <div className="p-3 bg-red-400/10 border border-red-400/20 text-red-400 text-xs rounded-xl max-w-md mx-auto text-center flex items-center justify-center gap-2">
                 <span>{error}</span>
               </div>
             )}
@@ -189,13 +191,13 @@ export default function Chat() {
           </div>
 
           {/* Form input bar */}
-          <div className="p-4 border-t border-slate-700/40 bg-slate-900/20">
+          <div className="p-3 sm:p-4 border-t border-white/5 bg-gray-900/50">
             <form onSubmit={handleSubmit} className="flex gap-2">
               <input
                 type="text"
                 required
                 placeholder="Ask about your transactions (e.g. How much did I spend last month?)..."
-                className="form-input flex-1 py-3"
+                className="flex-1 bg-gray-800/60 border border-white/5 text-white placeholder-gray-600 text-xs sm:text-sm rounded-xl px-4 py-2.5 outline-none focus:border-white/10 transition-all"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 disabled={loading}
@@ -203,13 +205,13 @@ export default function Chat() {
               <button
                 type="submit"
                 disabled={loading || !inputText.trim()}
-                className="btn btn-primary px-5 py-3 shrink-0"
+                className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 text-xs sm:text-sm font-semibold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <Send className="w-4 h-4" />
+                    <Send className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Ask AI</span>
                   </>
                 )}
