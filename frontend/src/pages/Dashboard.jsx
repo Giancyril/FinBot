@@ -8,6 +8,7 @@ import CategoryBarChart from '../components/charts/CategoryBarChart';
 import SpendingLineChart from '../components/charts/SpendingLineChart';
 import CustomSelectDropdown from '../components/CustomSelectDropdown';
 import SettingsModal from '../components/SettingsModal';
+import CustomDatePicker from '../components/CustomDatePicker';
 import {
   Wallet, MessageSquare, LogOut, RefreshCw, DollarSign,
   TrendingUp, Receipt, ShoppingBag, ArrowRight, Bot,
@@ -307,7 +308,14 @@ export default function Dashboard() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
-                onClick={() => setIsAddTxOpen(true)}
+                onClick={() => {
+                  const today = new Date();
+                  const yyyy = today.getFullYear();
+                  const mm = String(today.getMonth() + 1).padStart(2, '0');
+                  const dd = String(today.getDate()).padStart(2, '0');
+                  setTxDate(`${yyyy}-${mm}-${dd}`);
+                  setIsAddTxOpen(true);
+                }}
                 className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/35 text-emerald-400 text-xs font-semibold rounded-xl transition-all shadow-sm"
               >
                 <Plus size={12} /> Add Transaction
@@ -531,11 +539,12 @@ export default function Dashboard() {
                           onChange={(e) => setGoalCurrent(e.target.value)}
                           className="bg-gray-800/60 border border-white/5 text-white placeholder-gray-600 text-xs rounded-xl px-3 py-2.5 outline-none focus:border-white/10 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
-                        <input
-                          type="date"
+                        <CustomDatePicker
                           value={goalDate}
-                          onChange={(e) => setGoalDate(e.target.value)}
-                          className="bg-gray-800/60 border border-white/5 text-gray-500 placeholder-gray-600 text-[10px] rounded-xl px-2.5 py-2.5 outline-none focus:border-white/10 transition-all cursor-pointer"
+                          onChange={setGoalDate}
+                          placeholder="Target Date"
+                          size="sm"
+                          openUp={true}
                         />
                       </div>
                       <button
@@ -778,12 +787,11 @@ export default function Dashboard() {
 
                 <div className="space-y-1">
                   <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Date</label>
-                  <input
-                    type="date"
-                    required
+                  <CustomDatePicker
                     value={txDate}
-                    onChange={(e) => setTxDate(e.target.value)}
-                    className="w-full bg-gray-800/60 border border-white/5 text-gray-400 text-xs rounded-xl px-4 py-2.5 outline-none focus:border-white/10 transition-all"
+                    onChange={setTxDate}
+                    placeholder="Select Date"
+                    size="sm"
                   />
                 </div>
               </div>

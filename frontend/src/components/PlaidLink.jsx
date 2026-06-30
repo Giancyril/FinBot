@@ -44,20 +44,20 @@ export default function PlaidLink({ onSyncComplete }) {
   const { open, ready } = usePlaidLink({ token: linkToken, onSuccess, onExit: (err) => { if (err) setError(err.message); } });
 
   if (syncing) return (
-    <div className="flex items-center gap-3 py-2.5 px-4 bg-indigo-500/5 border border-indigo-500/20 rounded-xl">
-      <RefreshCw size={14} className="text-indigo-400 animate-spin shrink-0" />
-      <span className="text-indigo-400 text-xs font-medium">Syncing transactions...</span>
+    <div className="flex items-center gap-1.5 py-2 px-3.5 bg-indigo-500/5 border border-indigo-500/20 rounded-xl">
+      <RefreshCw size={12} className="text-indigo-400 animate-spin shrink-0" />
+      <span className="text-indigo-400 text-xs font-semibold">Syncing...</span>
     </div>
   );
 
   if (connected) return (
-    <div className="flex items-center justify-between py-2.5 px-4 bg-emerald-400/5 border border-emerald-400/20 rounded-xl gap-4">
-      <div className="flex items-center gap-2 text-emerald-400">
-        <CheckCircle size={14} className="shrink-0" />
-        <span className="text-xs font-semibold whitespace-nowrap">Connected to {institution}</span>
+    <div className="flex items-center justify-between py-2 px-3.5 bg-emerald-400/5 border border-emerald-400/20 rounded-xl gap-3">
+      <div className="flex items-center gap-1.5 text-emerald-400">
+        <CheckCircle size={12} className="shrink-0" />
+        <span className="text-xs font-semibold whitespace-nowrap">Connected: {institution}</span>
       </div>
       <button onClick={() => { setConnected(false); fetchLinkToken(); }}
-        className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold transition-colors whitespace-nowrap">
+        className="text-[10px] text-indigo-400 hover:text-indigo-300 font-semibold transition-colors whitespace-nowrap">
         + Add Another
       </button>
     </div>
@@ -66,12 +66,12 @@ export default function PlaidLink({ onSyncComplete }) {
   return (
     <div className="space-y-2">
       <button onClick={() => open()} disabled={!ready || loading}
-        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-400/10 hover:bg-emerald-400/15 border border-emerald-400/20 hover:border-emerald-400/40 text-emerald-400 text-sm font-semibold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-        <Link2 size={14} className="shrink-0" />
+        className="w-full flex items-center justify-center gap-1.5 py-2 px-3.5 bg-emerald-450/10 hover:bg-emerald-450/20 border border-emerald-450/20 hover:border-emerald-450/35 text-emerald-400 text-xs font-semibold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+        <Link2 size={12} className="shrink-0" />
         <span>{loading ? 'Initializing...' : 'Connect Bank Account'}</span>
       </button>
       {error && (
-        <div className="flex items-center gap-2 text-red-400 text-[11px]">
+        <div className="flex items-center gap-1.5 text-red-400 text-[10px]">
           <AlertCircle size={11} /> <span>{error}</span>
         </div>
       )}
