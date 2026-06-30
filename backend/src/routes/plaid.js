@@ -176,4 +176,37 @@ router.get('/balances', authMiddleware, async (req, res) => {
   }
 });
 
+// DELETE /api/plaid/items/:id
+// Revokes Plaid access token and removes item from database
+router.delete('/items/:id', authMiddleware, async (req, res) => {
+  try {
+    const itemResult = await pool.query(
+      'SELECT id, access_token_encrypted FROM plaid_items WHERE id = $1 AND user_id = $2',
+      [req.params.id, req.user.id]
+    );
+
+    if (itemResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Connected account not found.' });
+    }
+
+    const item = itemResult.rows[0];
+    const { decrypt } = require('../services/cryptoService');
+
+    try {
+      const accessToken = decrypt(item.access_token_encrypted);
+      await plaidClient.itemRemove({ access_token: accessToken });
+    } catch (plaidErr) {
+      console.warn(`Plaid item/remove API call failed, proceeding with DB deletion:`, plaidErr.message);
+    }
+
+    // Delete from database
+    await pool.query('DELETE FROM plaid_items WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+
+    return res.json({ message: 'Account disconnected successfully.' });
+  } catch (err) {
+    console.error('Disconnect Plaid item error:', err.message);
+    return res.status(500).json({ error: 'Failed to disconnect account.' });
+  }
+});
+
 module.exports = router;
