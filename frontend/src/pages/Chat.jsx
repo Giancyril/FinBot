@@ -271,42 +271,40 @@ export default function Chat() {
               </button>
             </form>
           </div>
-
         </main>
       </div>
-    </div>
 
-    {/* ── Clear Chat Confirmation Modal ── */}
-    {isClearConfirmOpen && (
-      <div className="fixed inset-0 bg-gray-950/75 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-gray-900 border border-white/10 rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
-          <div>
-            <h3 className="text-white text-sm font-bold">Clear Chat History?</h3>
-            <p className="text-gray-500 text-[11px] mt-0.5">This will permanently delete all messages in this conversation. This action cannot be undone.</p>
-          </div>
+      {/* ── Clear Chat Confirmation Modal ── */}
+      {isClearConfirmOpen && (
+        <div className="fixed inset-0 bg-gray-950/75 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-white/10 rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
+            <div>
+              <h3 className="text-white text-sm font-bold">Clear Chat History?</h3>
+              <p className="text-gray-500 text-[11px] mt-0.5">This will permanently delete all messages in this conversation. This action cannot be undone.</p>
+            </div>
 
-          <div className="flex items-center justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => setIsClearConfirmOpen(false)}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700/60 text-gray-400 hover:text-white text-xs font-semibold rounded-xl transition-all"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                clearHistory();
-                setIsClearConfirmOpen(false);
-              }}
-              className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-xl transition-all shadow-lg shadow-red-600/10"
-            >
-              Clear History
-            </button>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setIsClearConfirmOpen(false)}
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700/60 text-gray-400 hover:text-white text-xs font-semibold rounded-xl transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  clearHistory();
+                  setIsClearConfirmOpen(false);
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-xl transition-all shadow-lg shadow-red-600/10"
+              >
+                Clear History
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
 }

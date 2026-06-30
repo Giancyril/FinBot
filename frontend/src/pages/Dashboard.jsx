@@ -630,6 +630,7 @@ export default function Dashboard() {
                         })
                       )}
                     </div>
+                  </div>
                 </div>
 
                 {/* Recurring Subscriptions */}
@@ -812,6 +813,7 @@ export default function Dashboard() {
             </form>
           </div>
         </div>
+      )}
       {/* ── Settings Modal ── */}
       <SettingsModal
         isOpen={isSettingsOpen}
