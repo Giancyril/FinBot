@@ -110,4 +110,16 @@ router.post('/', authMiddleware, async (req, res) => {
   });
 });
 
+// DELETE /api/chat/history
+// Clears all chat messages for the authenticated user
+router.delete('/history', authMiddleware, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM chat_messages WHERE user_id = $1', [req.user.id]);
+    return res.json({ message: 'Chat history cleared successfully.' });
+  } catch (err) {
+    console.error('Clear chat history error:', err.message);
+    return res.status(500).json({ error: 'Failed to clear chat history.' });
+  }
+});
+
 module.exports = router;
