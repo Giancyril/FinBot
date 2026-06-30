@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, ShoppingBag, ChevronDown } from 'lucide-react';
+import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
+import CustomSelectDropdown from './CustomSelectDropdown';
 
 const CATEGORIES = ['Food and Drink', 'Shops', 'Travel', 'Service', 'Recreation', 'Transfer', 'Payment'];
 
@@ -11,9 +12,7 @@ export default function TransactionList({ refreshTrigger }) {
   const [category, setCategory] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const limit = 10;
-  const dropdownRef = useRef(null);
 
   const fetchTransactions = async () => {
     try {
@@ -32,17 +31,6 @@ export default function TransactionList({ refreshTrigger }) {
   useEffect(() => { setPage(1); }, [search, category]);
   useEffect(() => { fetchTransactions(); }, [page, search, category, refreshTrigger]);
 
-  // Close dropdown on click outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   return (
@@ -57,41 +45,14 @@ export default function TransactionList({ refreshTrigger }) {
         </div>
 
         {/* Custom Select Dropdown */}
-        <div className="relative w-full sm:w-48" ref={dropdownRef}>
-          <button
-            type="button"
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="w-full flex items-center justify-between bg-gray-800/60 border border-white/5 text-gray-300 text-xs rounded-xl px-4 py-2.5 outline-none hover:border-white/10 transition-all text-left"
-          >
-            <span className="flex items-center gap-2 truncate">
-              <SlidersHorizontal size={13} className="text-gray-600 shrink-0" />
-              {category || 'All Categories'}
-            </span>
-            <ChevronDown size={13} className={`text-gray-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {dropdownOpen && (
-            <div className="absolute right-0 mt-1.5 w-full bg-gray-900 border border-white/10 rounded-xl shadow-xl z-50 py-1 overflow-hidden">
-              <button
-                type="button"
-                onClick={() => { setCategory(''); setDropdownOpen(false); }}
-                className={`w-full text-left px-4 py-2 text-xs transition-colors ${!category ? 'bg-indigo-500/10 text-indigo-400 font-semibold' : 'text-gray-400 hover:bg-white/[0.03] hover:text-white'}`}
-              >
-                All Categories
-              </button>
-              {CATEGORIES.map(c => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => { setCategory(c); setDropdownOpen(false); }}
-                  className={`w-full text-left px-4 py-2 text-xs transition-colors ${category === c ? 'bg-indigo-500/10 text-indigo-400 font-semibold' : 'text-gray-400 hover:bg-white/[0.03] hover:text-white'}`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <CustomSelectDropdown
+          value={category}
+          onChange={(val) => setCategory(val === 'All Categories' ? '' : val)}
+          options={['All Categories', ...CATEGORIES]}
+          placeholder="All Categories"
+          icon={SlidersHorizontal}
+          className="w-full sm:w-48"
+        />
       </div>
 
       {/* Table Container with Min-Height to prevent shaking/collapsing */}
