@@ -687,9 +687,6 @@ export default function Dashboard() {
             <Link to="/chat"
               className="group flex items-center justify-between bg-gray-900 border border-white/5 hover:border-indigo-500/20 rounded-2xl p-4 sm:p-5 transition-all">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
-                  <Sparkles size={16} className="text-indigo-400" />
-                </div>
                 <div>
                   <p className="text-white text-sm font-semibold">Ask AI about your finances</p>
                   <p className="text-gray-500 text-xs mt-0.5">"How much did I spend on food this month?"</p>

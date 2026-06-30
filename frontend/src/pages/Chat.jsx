@@ -117,9 +117,7 @@ export default function Chat() {
       {/* Header */}
       <header className="bg-gray-900 border-b border-white/5 py-3 px-4 sm:px-6 flex items-center justify-between z-10">
         <div className="flex items-center gap-3">
-          <Link to="/" className="w-8 h-8 flex items-center justify-center bg-gray-800/60 border border-white/5 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all">
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
+
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/10">
               <Wallet size={15} className="text-white" />
@@ -127,10 +125,6 @@ export default function Chat() {
             <div>
               <h1 className="text-sm font-bold tracking-tight bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent flex items-center gap-1.5">
                 FinAI
-                <span className="flex h-1.5 w-1.5 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                </span>
               </h1>
               <p className="text-[10px] text-gray-500">Powered by Google Gemini</p>
             </div>
@@ -152,12 +146,11 @@ export default function Chat() {
 
       {/* Main Chat Layout */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden max-w-7xl w-full mx-auto p-3 sm:p-4 gap-3 sm:gap-4 z-10">
-        
+
         {/* Recommended Prompts sidebar */}
         <aside className="w-full md:w-64 flex flex-col gap-3 md:h-full md:overflow-y-auto">
           <div className="bg-gray-900 border border-white/5 rounded-2xl p-4 flex flex-col gap-3">
             <h3 className="text-xs font-bold text-white flex items-center gap-1.5 mb-0.5">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
               Suggested Prompts
             </h3>
             <div className="flex flex-wrap md:flex-col gap-2">
@@ -177,7 +170,7 @@ export default function Chat() {
 
         {/* Message Window Area */}
         <main className="flex-1 flex flex-col bg-gray-900 border border-white/5 rounded-2xl overflow-hidden relative">
-          
+
           {/* Messages list */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
             {messages.length === 0 && !streamingMessage && (
@@ -195,26 +188,23 @@ export default function Chat() {
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex gap-3 max-w-[85%] ${
-                  msg.role === 'user' ? 'ml-auto flex-row-reverse' : 'mr-auto'
-                }`}
+                className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : 'mr-auto'
+                  }`}
               >
                 <div
-                  className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
-                    msg.role === 'user'
-                      ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
-                      : 'bg-gray-800 border-white/5 text-gray-400'
-                  }`}
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${msg.role === 'user'
+                    ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+                    : 'bg-gray-800 border-white/5 text-gray-400'
+                    }`}
                 >
                   {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                 </div>
 
                 <div
-                  className={`p-3.5 rounded-2xl text-sm leading-relaxed ${
-                    msg.role === 'user'
-                      ? 'bg-indigo-500/10 border border-indigo-500/20 text-white rounded-tr-none'
-                      : 'bg-gray-800/40 border border-white/5 text-gray-200 rounded-tl-none'
-                  }`}
+                  className={`p-3.5 rounded-2xl text-sm leading-relaxed ${msg.role === 'user'
+                    ? 'bg-indigo-500/10 border border-indigo-500/20 text-white rounded-tr-none'
+                    : 'bg-gray-800/40 border border-white/5 text-gray-200 rounded-tl-none'
+                    }`}
                 >
                   {renderMarkdown(msg.content)}
                 </div>

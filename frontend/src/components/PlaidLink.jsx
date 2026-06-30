@@ -66,7 +66,7 @@ export default function PlaidLink({ onSyncComplete }) {
   return (
     <div className="space-y-2">
       <button onClick={() => open()} disabled={!ready || loading}
-        className="w-full flex items-center justify-center gap-1.5 py-2 px-3.5 bg-emerald-450/10 hover:bg-emerald-450/20 border border-emerald-450/20 hover:border-emerald-450/35 text-emerald-400 text-xs font-semibold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+        className="w-full flex items-center justify-center gap-1.5 py-2 px-3.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/35 text-emerald-400 text-xs font-semibold rounded-xl transition-all shadow-sm">
         <Link2 size={12} className="shrink-0" />
         <span>{loading ? 'Initializing...' : 'Connect Bank Account'}</span>
       </button>
