@@ -68,6 +68,37 @@ export default function Dashboard() {
   const [contributeAmount, setContributeAmount] = useState({});
   const [contributeOpenId, setContributeOpenId] = useState(null);
 
+  const [isAddTxOpen, setIsAddTxOpen] = useState(false);
+  const [txAmount, setTxAmount] = useState('');
+  const [txCategory, setTxCategory] = useState('');
+  const [txMerchant, setTxMerchant] = useState('');
+  const [txDescription, setTxDescription] = useState('');
+  const [txDate, setTxDate] = useState('');
+
+  const handleCreateTransaction = async (e) => {
+    e.preventDefault();
+    if (!txAmount || !txDescription || !txDate) return;
+    try {
+      await axios.post('/api/transactions', {
+        amount: parseFloat(txAmount),
+        category: txCategory || 'Other',
+        merchant_name: txMerchant || null,
+        name: txDescription,
+        date: txDate,
+      });
+      setIsAddTxOpen(false);
+      setTxAmount('');
+      setTxCategory('');
+      setTxMerchant('');
+      setTxDescription('');
+      setTxDate('');
+      setRefreshKey(k => k + 1);
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -250,7 +281,15 @@ export default function Dashboard() {
               </h2>
               <p className="text-gray-500 text-xs sm:text-sm mt-0.5">Here's your financial overview for this period.</p>
             </div>
-            <PlaidLink onSyncComplete={() => { setRefreshKey(k => k + 1); fetchData(); }} />
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setIsAddTxOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/35 text-emerald-400 text-xs font-semibold rounded-xl transition-all shadow-sm"
+              >
+                <Plus size={12} /> Add Transaction
+              </button>
+              <PlaidLink onSyncComplete={() => { setRefreshKey(k => k + 1); fetchData(); }} />
+            </div>
           </div>
         </div>
 
@@ -584,6 +623,105 @@ export default function Dashboard() {
           <p className="text-[10px] text-gray-700">FinAI · Powered by Gemini · Plaid Sandbox</p>
         </div>
       </div>
+
+      {/* ── Add Transaction Modal ── */}
+      {isAddTxOpen && (
+        <div className="fixed inset-0 bg-gray-950/75 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-white/10 rounded-2xl p-5 w-full max-w-md shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
+            <div>
+              <h3 className="text-white text-sm font-bold">Add Manual Transaction</h3>
+              <p className="text-gray-500 text-[11px] mt-0.5">Log custom expenses not captured by bank sync.</p>
+            </div>
+
+            <form onSubmit={handleCreateTransaction} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Amount ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  placeholder="0.00"
+                  value={txAmount}
+                  onChange={(e) => setTxAmount(e.target.value)}
+                  className="w-full bg-gray-800/60 border border-white/5 text-white placeholder-gray-600 text-xs rounded-xl px-4 py-2.5 outline-none focus:border-white/10 transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Description</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Grocery shopping"
+                    value={txDescription}
+                    onChange={(e) => setTxDescription(e.target.value)}
+                    className="w-full bg-gray-800/60 border border-white/5 text-white placeholder-gray-600 text-xs rounded-xl px-4 py-2.5 outline-none focus:border-white/10 transition-all"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Merchant (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Walmart"
+                    value={txMerchant}
+                    onChange={(e) => setTxMerchant(e.target.value)}
+                    className="w-full bg-gray-800/60 border border-white/5 text-white placeholder-gray-600 text-xs rounded-xl px-4 py-2.5 outline-none focus:border-white/10 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Category</label>
+                  <CustomSelectDropdown
+                    value={txCategory}
+                    onChange={setTxCategory}
+                    options={CATEGORIES}
+                    placeholder="Select Category"
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={txDate}
+                    onChange={(e) => setTxDate(e.target.value)}
+                    className="w-full bg-gray-800/60 border border-white/5 text-gray-400 text-xs rounded-xl px-4 py-2.5 outline-none focus:border-white/10 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddTxOpen(false);
+                    setTxAmount('');
+                    setTxCategory('');
+                    setTxMerchant('');
+                    setTxDescription('');
+                    setTxDate('');
+                  }}
+                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700/60 text-gray-400 hover:text-white text-xs font-semibold rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition-all shadow-lg shadow-indigo-600/10"
+                >
+                  Add Transaction
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
