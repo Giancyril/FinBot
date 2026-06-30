@@ -53,6 +53,7 @@ export default function Dashboard() {
   const [trendData, setTrendData] = useState([]);
   const [budgets, setBudgets] = useState([]);
   const [savings, setSavings] = useState([]);
+  const [subscriptions, setSubscriptions] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -102,18 +103,20 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [sumRes, catRes, trendRes, budgetRes, savingsRes] = await Promise.all([
+      const [sumRes, catRes, trendRes, budgetRes, savingsRes, subsRes] = await Promise.all([
         axios.get('/api/transactions/summary'),
         axios.get('/api/transactions/by-category'),
         axios.get('/api/transactions/daily-trend'),
         axios.get('/api/budgets'),
         axios.get('/api/savings'),
+        axios.get('/api/subscriptions'),
       ]);
       setSummary(sumRes.data);
       setCategoryData(catRes.data || []);
       setTrendData(trendRes.data || []);
       setBudgets(budgetRes.data || []);
       setSavings(savingsRes.data || []);
+      setSubscriptions(subsRes.data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -572,6 +575,44 @@ export default function Dashboard() {
                                   style={{ width: `${percent}%` }}
                                 />
                               </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                </div>
+
+                {/* Recurring Subscriptions */}
+                <div className="bg-gray-900 border border-white/5 rounded-2xl flex flex-col">
+                  <SectionHeader
+                    title="Recurring Bills"
+                    sub="Detected subscription profiles"
+                    action={
+                      subscriptions.length > 0 && (
+                        <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-lg font-semibold">
+                          ${subscriptions.reduce((sum, s) => sum + (s.frequency === 'monthly' ? s.amount : s.frequency === 'bi-weekly' ? s.amount * 2.14 : s.amount * 4.3), 0).toFixed(0)}/mo
+                        </span>
+                      )
+                    }
+                  />
+                  <div className="p-4 sm:p-5">
+                    <div className="space-y-3 overflow-y-auto max-h-[220px] pr-1 min-h-[100px]">
+                      {subscriptions.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-6 text-center">
+                          <p className="text-gray-600 text-[11px]">No recurring bills detected yet</p>
+                        </div>
+                      ) : (
+                        subscriptions.map((sub, idx) => {
+                          const nextDate = new Date(sub.next_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+                          return (
+                            <div key={idx} className="flex items-center justify-between text-[11px]">
+                              <div className="min-w-0">
+                                <p className="text-gray-300 font-semibold truncate">{sub.name}</p>
+                                <p className="text-gray-600 text-[9px] capitalize mt-0.5">{sub.frequency} • Next: {nextDate}</p>
+                              </div>
+                              <span className="text-white font-bold shrink-0">
+                                ${sub.amount.toFixed(2)}
+                              </span>
                             </div>
                           );
                         })
