@@ -156,6 +156,60 @@ Guidelines:
       const model = genAI.getGenerativeModel({
         model: 'gemini-2.5-flash',
         systemInstruction: systemPrompt,
+        tools: [{
+          functionDeclarations: [
+            {
+              name: 'createBudget',
+              description: 'Creates or updates a monthly budget limit for a transaction category.',
+              parameters: {
+                type: 'OBJECT',
+                properties: {
+                  category: {
+                    type: 'STRING',
+                    description: 'The transaction category, must be one of: Food and Drink, Shops, Travel, Service, Recreation, Transfer, Payment.',
+                    enum: ['Food and Drink', 'Shops', 'Travel', 'Service', 'Recreation', 'Transfer', 'Payment']
+                  },
+                  limit_amount: {
+                    type: 'NUMBER',
+                    description: 'The monthly budget limit amount in dollars.'
+                  }
+                },
+                required: ['category', 'limit_amount']
+              }
+            },
+            {
+              name: 'logTransaction',
+              description: 'Logs a manual transaction (cash expense or income).',
+              parameters: {
+                type: 'OBJECT',
+                properties: {
+                  amount: {
+                    type: 'NUMBER',
+                    description: 'The amount of the transaction in dollars. Positive for debits/expenses, negative for credits/income.'
+                  },
+                  category: {
+                    type: 'STRING',
+                    description: 'The category, must be one of: Food and Drink, Shops, Travel, Service, Recreation, Transfer, Payment, or Other.',
+                    enum: ['Food and Drink', 'Shops', 'Travel', 'Service', 'Recreation', 'Transfer', 'Payment', 'Other']
+                  },
+                  name: {
+                    type: 'STRING',
+                    description: 'The description of the transaction (e.g. McDonald\'s lunch).'
+                  },
+                  merchant_name: {
+                    type: 'STRING',
+                    description: 'The optional merchant name.'
+                  },
+                  date: {
+                    type: 'STRING',
+                    description: 'The date of the transaction in YYYY-MM-DD format.'
+                  }
+                },
+                required: ['amount', 'name', 'date']
+              }
+            }
+          ]
+        }]
       });
 
       // Map chat history to Gemini's format: roles are either 'user' or 'model' (not 'assistant')
@@ -176,11 +230,79 @@ Guidelines:
       const resultStream = await chat.sendMessageStream(userMessage);
 
       let fullText = '';
+      let functionCallDetected = null;
+
       for await (const chunk of resultStream.stream) {
+        const calls = chunk.functionCalls;
+        if (calls && calls.length > 0) {
+          functionCallDetected = calls[0];
+          break;
+        }
+
         const text = chunk.text();
         if (text) {
           fullText += text;
           onChunk(text);
+        }
+      }
+
+      if (functionCallDetected) {
+        const { name, args } = functionCallDetected;
+        let toolResponse = '';
+
+        if (name === 'createBudget') {
+          try {
+            await pool.query(
+              `INSERT INTO budgets (user_id, category, limit_amount, updated_at)
+               VALUES ($1, $2, $3, NOW())
+               ON CONFLICT (user_id, category)
+               DO UPDATE SET limit_amount = EXCLUDED.limit_amount, updated_at = NOW()`,
+              [userId, args.category, args.limit_amount]
+            );
+            toolResponse = `Successfully set a monthly budget of $${args.limit_amount} for ${args.category}.`;
+          } catch (err) {
+            console.error('Tool createBudget error:', err);
+            toolResponse = `Failed to set the budget due to a database error.`;
+          }
+        } else if (name === 'logTransaction') {
+          try {
+            const crypto = require('crypto');
+            const manualId = `manual_${crypto.randomUUID()}`;
+            await pool.query(
+              `INSERT INTO transactions
+                 (user_id, plaid_transaction_id, amount, category, merchant_name, name, date, is_manual, pending)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, FALSE)`,
+              [
+                userId,
+                manualId,
+                args.amount,
+                args.category || 'Other',
+                args.merchant_name || null,
+                args.name,
+                args.date,
+              ]
+            );
+            toolResponse = `Successfully logged a manual transaction of $${args.amount} for "${args.name}" on ${args.date}.`;
+          } catch (err) {
+            console.error('Tool logTransaction error:', err);
+            toolResponse = `Failed to log the transaction due to a database error.`;
+          }
+        }
+
+        // Send the function response back to the model to get the final conversational reply
+        const responseStream = await chat.sendMessageStream([{
+          functionResponse: {
+            name: name,
+            response: { result: toolResponse }
+          }
+        }]);
+
+        for await (const chunk of responseStream.stream) {
+          const text = chunk.text();
+          if (text) {
+            fullText += text;
+            onChunk(text);
+          }
         }
       }
 
