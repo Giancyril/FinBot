@@ -152,9 +152,9 @@ Guidelines:
 6. Provide concrete suggestions when asked, e.g., if they ask how to save money, point to their top category and suggest a realistic 10-15% cut.
 `;
 
-      // Get the model (using gemini-1.5-flash for speed and free tier)
+      // Get the model (using gemini-2.5-flash for speed and capability)
       const model = genAI.getGenerativeModel({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         systemInstruction: systemPrompt,
       });
 

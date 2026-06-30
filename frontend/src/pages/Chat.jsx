@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useChat } from '../hooks/useChat';
 import { useAuth } from '../contexts/AuthContext';
-import { Send, Bot, User, Sparkles, MessageSquare, ArrowLeft } from 'lucide-react';
+import { Send, Bot, User, Sparkles, MessageSquare, ArrowLeft, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const SUGGESTED_CHIPS = [
@@ -12,30 +12,73 @@ const SUGGESTED_CHIPS = [
   "Analyze my top spending categories"
 ];
 
-// Simple markdown formatter helper since we want to avoid extra heavy libraries
-// Supports bold, bullet points, headers, inline code, and basic tables
+// Simple markdown formatter helper to parse block-level and inline markdown elements
 function renderMarkdown(text) {
   if (!text) return '';
-  
-  let formatted = text
+
+  // Escape HTML
+  let safeText = text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
-  // Bold
-  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  
-  // Headers
-  formatted = formatted.replace(/^### (.*?)$/gm, '<h4 class="text-sm font-semibold mt-3 mb-1 text-indigo-300">$1</h4>');
-  formatted = formatted.replace(/^## (.*?)$/gm, '<h3 class="text-base font-bold mt-4 mb-2 text-indigo-200">$1</h3>');
-  
-  // Bullet lists
-  formatted = formatted.replace(/^\s*-\s+(.*?)$/gm, '<li class="ml-4 list-disc">$1</li>');
-  
-  // Inline Code
-  formatted = formatted.replace(/`(.*?)`/g, '<code class="bg-black/40 px-1.5 py-0.5 rounded text-indigo-300 text-[11px] font-mono">$1</code>');
+  // Split into blocks by double newlines
+  const blocks = safeText.split(/\n\n+/);
 
-  return <div className="space-y-1.5 text-xs sm:text-sm" dangerouslySetInnerHTML={{ __html: formatted }} />;
+  const parsedBlocks = blocks.map((block, idx) => {
+    let trimmed = block.trim();
+    if (!trimmed) return null;
+
+    // Headers
+    if (trimmed.startsWith('### ')) {
+      return `<h4 class="text-sm font-bold mt-3 mb-1 text-indigo-300">${parseInline(trimmed.substring(4))}</h4>`;
+    }
+    if (trimmed.startsWith('## ')) {
+      return `<h3 class="text-base font-bold mt-4 mb-1.5 text-indigo-200">${parseInline(trimmed.substring(3))}</h3>`;
+    }
+    if (trimmed.startsWith('# ')) {
+      return `<h2 class="text-lg font-bold mt-5 mb-2 text-white">${parseInline(trimmed.substring(2))}</h2>`;
+    }
+
+    // Bullet lists
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      const items = trimmed.split(/\n\s*[-\*]\s+/);
+      const listHtml = items.map((item, i) => {
+        // Strip leading symbol for first item
+        const cleanItem = i === 0 ? item.replace(/^[-\*]\s+/, '') : item;
+        return `<li class="ml-4 list-disc mb-1">${parseInline(cleanItem)}</li>`;
+      }).join('');
+      return `<ul class="space-y-1 my-2">${listHtml}</ul>`;
+    }
+
+    // Numbered lists
+    if (/^\d+\.\s+/.test(trimmed)) {
+      const items = trimmed.split(/\n\s*\d+\.\s+/);
+      const listHtml = items.map((item, i) => {
+        const cleanItem = i === 0 ? item.replace(/^\d+\.\s+/, '') : item;
+        return `<li class="ml-5 list-decimal mb-1">${parseInline(cleanItem)}</li>`;
+      }).join('');
+      return `<ol class="space-y-1 my-2">${listHtml}</ol>`;
+    }
+
+    // Regular paragraph
+    return `<p class="leading-relaxed mb-2">${parseInline(trimmed).replace(/\n/g, '<br />')}</p>`;
+  });
+
+  return (
+    <div className="space-y-2 text-xs sm:text-sm text-gray-200">
+      {parsedBlocks.map((html, idx) => html ? <div key={idx} dangerouslySetInnerHTML={{ __html: html }} /> : null)}
+    </div>
+  );
+}
+
+// Helper to parse inline bold and code formatting
+function parseInline(inlineText) {
+  return inlineText
+    // Bold
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-white">$1</strong>')
+    // Inline Code
+    .replace(/`(.*?)`/g, '<code class="bg-black/40 px-1.5 py-0.5 rounded text-indigo-300 text-[11px] font-mono">$1</code>');
 }
 
 export default function Chat() {
@@ -77,12 +120,12 @@ export default function Chat() {
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
-              <Bot className="w-4.5 h-4.5 text-indigo-400" />
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/10">
+              <Wallet size={15} className="text-white" />
             </div>
             <div>
-              <h1 className="text-sm font-bold text-white flex items-center gap-1.5">
-                FinAI Assistant
+              <h1 className="text-sm font-bold tracking-tight bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent flex items-center gap-1.5">
+                FinAI
                 <span className="flex h-1.5 w-1.5 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
