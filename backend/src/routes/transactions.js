@@ -1,0 +1,234 @@
+const express = require('express');
+const pool = require('../config/db');
+const plaidClient = require('../config/plaidClient');
+const { decrypt } = require('../services/cryptoService');
+const authMiddleware = require('../middleware/auth');
+
+const router = express.Router();
+
+/**
+ * Internal helper: sync transactions for a single plaid_item.
+ * Uses transactionsSync with cursor-based pagination to get all changes.
+ */
+async function syncItemTransactions(item) {
+  const accessToken = decrypt(item.access_token_encrypted);
+  let cursor = item.cursor || null;
+  let hasMore = true;
+  let addedCount = 0;
+  let modifiedCount = 0;
+  let removedCount = 0;
+
+  while (hasMore) {
+    const response = await plaidClient.transactionsSync({
+      access_token: accessToken,
+      cursor: cursor || undefined,
+      count: 500,
+    });
+
+    const { added, modified, removed, next_cursor, has_more } = response.data;
+
+    // Upsert added and modified transactions
+    const toUpsert = [...added, ...modified];
+    for (const txn of toUpsert) {
+      await pool.query(
+        `INSERT INTO transactions
+           (user_id, plaid_transaction_id, amount, category, subcategory, merchant_name, name, date, pending)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT (plaid_transaction_id) DO UPDATE SET
+           amount = EXCLUDED.amount,
+           category = EXCLUDED.category,
+           subcategory = EXCLUDED.subcategory,
+           merchant_name = EXCLUDED.merchant_name,
+           name = EXCLUDED.name,
+           date = EXCLUDED.date,
+           pending = EXCLUDED.pending,
+           updated_at = NOW()`,
+        [
+          item.user_id,
+          txn.transaction_id,
+          txn.amount,
+          txn.personal_finance_category?.primary || (txn.category?.[0] ?? 'Other'),
+          txn.personal_finance_category?.detailed || (txn.category?.[1] ?? null),
+          txn.merchant_name || null,
+          txn.name,
+          txn.date,
+          txn.pending,
+        ]
+      );
+    }
+
+    addedCount += added.length;
+    modifiedCount += modified.length;
+
+    // Remove deleted transactions
+    for (const removed_txn of removed) {
+      await pool.query('DELETE FROM transactions WHERE plaid_transaction_id = $1', [removed_txn.transaction_id]);
+      removedCount++;
+    }
+
+    cursor = next_cursor;
+    hasMore = has_more;
+  }
+
+  // Save the new cursor
+  await pool.query(
+    'UPDATE plaid_items SET cursor = $1, last_synced_at = NOW() WHERE id = $2',
+    [cursor, item.id]
+  );
+
+  return { added: addedCount, modified: modifiedCount, removed: removedCount };
+}
+
+// POST /api/transactions/sync
+// Trigger a manual transaction sync for the current user
+router.post('/sync', authMiddleware, async (req, res) => {
+  try {
+    const itemsResult = await pool.query(
+      'SELECT id, user_id, access_token_encrypted, cursor FROM plaid_items WHERE user_id = $1',
+      [req.user.id]
+    );
+
+    if (itemsResult.rows.length === 0) {
+      return res.status(404).json({ error: 'No connected bank accounts found. Please connect a bank first.' });
+    }
+
+    let totalAdded = 0, totalModified = 0, totalRemoved = 0;
+    for (const item of itemsResult.rows) {
+      const counts = await syncItemTransactions(item);
+      totalAdded += counts.added;
+      totalModified += counts.modified;
+      totalRemoved += counts.removed;
+    }
+
+    return res.json({
+      message: 'Transactions synced successfully.',
+      stats: { added: totalAdded, modified: totalModified, removed: totalRemoved },
+    });
+  } catch (err) {
+    console.error('Transaction sync error:', err.response?.data || err.message);
+    return res.status(500).json({ error: 'Failed to sync transactions.' });
+  }
+});
+
+// GET /api/transactions
+// Fetch transactions with optional filters
+router.get('/', authMiddleware, async (req, res) => {
+  const {
+    start_date,
+    end_date,
+    category,
+    search,
+    page = 1,
+    limit = 50,
+  } = req.query;
+
+  const offset = (parseInt(page) - 1) * parseInt(limit);
+  const conditions = ['user_id = $1'];
+  const params = [req.user.id];
+  let paramIndex = 2;
+
+  if (start_date) {
+    conditions.push(`date >= $${paramIndex++}`);
+    params.push(start_date);
+  }
+  if (end_date) {
+    conditions.push(`date <= $${paramIndex++}`);
+    params.push(end_date);
+  }
+  if (category) {
+    conditions.push(`category ILIKE $${paramIndex++}`);
+    params.push(category);
+  }
+  if (search) {
+    conditions.push(`(merchant_name ILIKE $${paramIndex} OR name ILIKE $${paramIndex})`);
+    params.push(`%${search}%`);
+    paramIndex++;
+  }
+
+  const whereClause = conditions.join(' AND ');
+
+  try {
+    const [dataResult, countResult] = await Promise.all([
+      pool.query(
+        `SELECT id, plaid_transaction_id, amount, category, subcategory, merchant_name, name, date, pending
+         FROM transactions
+         WHERE ${whereClause}
+         ORDER BY date DESC
+         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+        [...params, parseInt(limit), offset]
+      ),
+      pool.query(`SELECT COUNT(*) FROM transactions WHERE ${whereClause}`, params),
+    ]);
+
+    return res.json({
+      transactions: dataResult.rows,
+      total: parseInt(countResult.rows[0].count),
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+  } catch (err) {
+    console.error('Get transactions error:', err.message);
+    return res.status(500).json({ error: 'Failed to fetch transactions.' });
+  }
+});
+
+// GET /api/transactions/summary
+// Returns aggregated data for charts and AI context
+router.get('/summary', authMiddleware, async (req, res) => {
+  const { start_date, end_date } = req.query;
+
+  // Default to current month if no range provided
+  const now = new Date();
+  const startDate = start_date || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const endDate = end_date || new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+  try {
+    const [categoryResult, merchantResult, totalResult, dailyResult] = await Promise.all([
+      // Category breakdown
+      pool.query(
+        `SELECT category, SUM(amount) as total, COUNT(*) as count
+         FROM transactions
+         WHERE user_id = $1 AND date BETWEEN $2 AND $3 AND pending = false AND amount > 0
+         GROUP BY category ORDER BY total DESC`,
+        [req.user.id, startDate, endDate]
+      ),
+      // Top merchants
+      pool.query(
+        `SELECT COALESCE(merchant_name, name) as merchant, SUM(amount) as total, COUNT(*) as count
+         FROM transactions
+         WHERE user_id = $1 AND date BETWEEN $2 AND $3 AND pending = false AND amount > 0
+         GROUP BY merchant ORDER BY total DESC LIMIT 10`,
+        [req.user.id, startDate, endDate]
+      ),
+      // Total spent
+      pool.query(
+        `SELECT SUM(amount) as total_spent, MAX(amount) as biggest_transaction,
+                MIN(amount) as smallest_transaction, COUNT(*) as transaction_count
+         FROM transactions
+         WHERE user_id = $1 AND date BETWEEN $2 AND $3 AND pending = false AND amount > 0`,
+        [req.user.id, startDate, endDate]
+      ),
+      // Daily spending
+      pool.query(
+        `SELECT date, SUM(amount) as daily_total
+         FROM transactions
+         WHERE user_id = $1 AND date BETWEEN $2 AND $3 AND pending = false AND amount > 0
+         GROUP BY date ORDER BY date ASC`,
+        [req.user.id, startDate, endDate]
+      ),
+    ]);
+
+    return res.json({
+      period: { start_date: startDate, end_date: endDate },
+      summary: totalResult.rows[0],
+      by_category: categoryResult.rows,
+      top_merchants: merchantResult.rows,
+      daily_spending: dailyResult.rows,
+    });
+  } catch (err) {
+    console.error('Get summary error:', err.message);
+    return res.status(500).json({ error: 'Failed to fetch transaction summary.' });
+  }
+});
+
+module.exports = { router, syncItemTransactions };
