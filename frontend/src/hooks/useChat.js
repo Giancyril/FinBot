@@ -123,8 +123,13 @@ export function useChat() {
     error,
     sendMessage,
     clearHistory: async () => {
-      // Future-proof helper
-      setMessages([]);
+      try {
+        await axios.delete('/api/chat/history');
+        setMessages([]);
+      } catch (err) {
+        console.error('Failed to clear chat history:', err);
+        setError('Could not clear chat history.');
+      }
     }
   };
 }

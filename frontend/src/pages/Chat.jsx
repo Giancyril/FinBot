@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useChat } from '../hooks/useChat';
 import { useAuth } from '../contexts/AuthContext';
-import { Send, Bot, User, Sparkles, MessageSquare, ArrowLeft, Wallet } from 'lucide-react';
+import { Send, Bot, User, Sparkles, MessageSquare, ArrowLeft, Wallet, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const SUGGESTED_CHIPS = [
@@ -82,9 +82,10 @@ function parseInline(inlineText) {
 }
 
 export default function Chat() {
-  const { messages, loading, streamingMessage, error, sendMessage } = useChat();
+  const { messages, loading, streamingMessage, error, sendMessage, clearHistory } = useChat();
   const { user } = useAuth();
   const [inputText, setInputText] = useState('');
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const chatEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -135,8 +136,17 @@ export default function Chat() {
             </div>
           </div>
         </div>
-        <div className="text-[10px] sm:text-xs text-gray-400 font-medium bg-gray-800/60 px-3 py-1.5 rounded-xl border border-white/5">
-          Logged in as <span className="text-indigo-400 font-semibold">{user?.email}</span>
+        <div className="flex items-center gap-2">
+          <div className="hidden sm:block text-[10px] sm:text-xs text-gray-400 font-medium bg-gray-800/60 px-3 py-1.5 rounded-xl border border-white/5">
+            Logged in as <span className="text-indigo-400 font-semibold">{user?.email}</span>
+          </div>
+          <button
+            onClick={() => setIsClearConfirmOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/35 text-red-400 text-xs font-semibold rounded-xl transition-all shadow-sm active:scale-[0.98]"
+            title="Clear Chat History"
+          >
+            <Trash2 size={12} /> <span className="hidden sm:inline">Clear Chat</span>
+          </button>
         </div>
       </header>
 
@@ -265,5 +275,38 @@ export default function Chat() {
         </main>
       </div>
     </div>
-  );
+
+    {/* ── Clear Chat Confirmation Modal ── */}
+    {isClearConfirmOpen && (
+      <div className="fixed inset-0 bg-gray-950/75 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-gray-900 border border-white/10 rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
+          <div>
+            <h3 className="text-white text-sm font-bold">Clear Chat History?</h3>
+            <p className="text-gray-500 text-[11px] mt-0.5">This will permanently delete all messages in this conversation. This action cannot be undone.</p>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setIsClearConfirmOpen(false)}
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-700/60 text-gray-400 hover:text-white text-xs font-semibold rounded-xl transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                clearHistory();
+                setIsClearConfirmOpen(false);
+              }}
+              className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-xl transition-all shadow-lg shadow-red-600/10"
+            >
+              Clear History
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+);
 }
