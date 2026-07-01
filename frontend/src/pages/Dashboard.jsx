@@ -108,24 +108,28 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [sumRes, catRes, trendRes, budgetRes, savingsRes, subsRes, balanceRes, compareRes] = await Promise.all([
-        axios.get('/api/transactions/summary'),
-        axios.get('/api/transactions/by-category'),
-        axios.get('/api/transactions/daily-trend'),
-        axios.get('/api/budgets'),
-        axios.get('/api/savings'),
-        axios.get('/api/subscriptions'),
-        axios.get('/api/plaid/balances'),
-        axios.get('/api/transactions/monthly-compare'),
+      const results = await Promise.allSettled([
+        axios.get('/api/transactions/summary'),       // 0
+        axios.get('/api/transactions/by-category'),   // 1
+        axios.get('/api/transactions/daily-trend'),   // 2
+        axios.get('/api/budgets'),                    // 3
+        axios.get('/api/savings'),                    // 4
+        axios.get('/api/subscriptions'),              // 5
+        axios.get('/api/plaid/balances'),             // 6
+        axios.get('/api/transactions/monthly-compare'), // 7
       ]);
-      setSummary(sumRes.data);
-      setCategoryData(catRes.data || []);
-      setTrendData(trendRes.data || []);
-      setBudgets(budgetRes.data || []);
-      setSavings(savingsRes.data || []);
-      setSubscriptions(subsRes.data || []);
-      setBalances(balanceRes.data || null);
-      setMonthlyCompare(compareRes.data || null);
+
+      const val = (i, fallback = null) =>
+        results[i].status === 'fulfilled' ? results[i].value.data : fallback;
+
+      setSummary(val(0));
+      setCategoryData(val(1, []));
+      setTrendData(val(2, []));
+      setBudgets(val(3, []));
+      setSavings(val(4, []));
+      setSubscriptions(val(5, []));
+      setBalances(val(6));
+      setMonthlyCompare(val(7));
     } catch (err) {
       console.error(err);
     } finally {

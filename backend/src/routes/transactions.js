@@ -172,8 +172,51 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/transactions/by-category
+// Returns spending totals grouped by category for the current month
+router.get('/by-category', authMiddleware, async (req, res) => {
+  const now = new Date();
+  const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const endDate   = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  try {
+    const result = await pool.query(
+      `SELECT category, SUM(amount) AS total, COUNT(*) AS count
+       FROM transactions
+       WHERE user_id = $1 AND date BETWEEN $2 AND $3 AND pending = false AND amount > 0
+       GROUP BY category ORDER BY total DESC`,
+      [req.user.id, startDate, endDate]
+    );
+    return res.json(result.rows);
+  } catch (err) {
+    console.error('By-category error:', err.message);
+    return res.status(500).json({ error: 'Failed to fetch category breakdown.' });
+  }
+});
+
+// GET /api/transactions/daily-trend
+// Returns daily spending totals for the current month
+router.get('/daily-trend', authMiddleware, async (req, res) => {
+  const now = new Date();
+  const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const endDate   = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  try {
+    const result = await pool.query(
+      `SELECT date, SUM(amount) AS daily_total
+       FROM transactions
+       WHERE user_id = $1 AND date BETWEEN $2 AND $3 AND pending = false AND amount > 0
+       GROUP BY date ORDER BY date ASC`,
+      [req.user.id, startDate, endDate]
+    );
+    return res.json(result.rows);
+  } catch (err) {
+    console.error('Daily trend error:', err.message);
+    return res.status(500).json({ error: 'Failed to fetch daily trend.' });
+  }
+});
+
 // GET /api/transactions/summary
 // Returns aggregated data for charts and AI context
+
 router.get('/summary', authMiddleware, async (req, res) => {
   const { start_date, end_date } = req.query;
 
