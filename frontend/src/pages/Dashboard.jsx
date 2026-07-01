@@ -395,13 +395,12 @@ export default function Dashboard() {
                   title="Month-over-Month Spending"
                   sub={`${monthlyCompare.previous_month?.label} → ${monthlyCompare.current_month?.label}`}
                   action={
-                    <span className={`flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-lg ${
-                      monthlyCompare.summary.total_pct > 0
+                    <span className={`flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-lg ${monthlyCompare.summary.total_pct > 0
                         ? 'text-red-400 bg-red-400/10'
                         : monthlyCompare.summary.total_pct < 0
-                        ? 'text-emerald-400 bg-emerald-400/10'
-                        : 'text-gray-400 bg-gray-400/10'
-                    }`}>
+                          ? 'text-emerald-400 bg-emerald-400/10'
+                          : 'text-gray-400 bg-gray-400/10'
+                      }`}>
                       {monthlyCompare.summary.total_pct > 0 ? '▲' : monthlyCompare.summary.total_pct < 0 ? '▼' : '—'}
                       {Math.abs(monthlyCompare.summary.total_pct)}%
                     </span>
@@ -436,9 +435,8 @@ export default function Dashboard() {
                           <div key={cat.category} className="group bg-gray-800/30 hover:bg-gray-800/60 border border-white/5 rounded-xl p-3 transition-all">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-[11px] font-semibold text-gray-300 truncate max-w-[110px]">{cat.category}</span>
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg ${
-                                cat.pct > 0 ? 'text-red-400 bg-red-400/10' : cat.pct < 0 ? 'text-emerald-400 bg-emerald-400/10' : 'text-gray-500 bg-gray-700/50'
-                              }`}>
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg ${cat.pct > 0 ? 'text-red-400 bg-red-400/10' : cat.pct < 0 ? 'text-emerald-400 bg-emerald-400/10' : 'text-gray-500 bg-gray-700/50'
+                                }`}>
                                 {cat.pct > 0 ? '+' : ''}{cat.pct}%
                               </span>
                             </div>
@@ -788,12 +786,7 @@ export default function Dashboard() {
           /* ── Transactions Tab ── */
           <div className="bg-gray-900 border border-white/5 rounded-2xl">
             <SectionHeader title="All Transactions" sub="Search, filter and browse your transaction history"
-              action={
-                <button onClick={() => setActiveTab('overview')}
-                  className="text-[11px] text-gray-500 hover:text-gray-300 font-medium transition-colors">
-                  ← Back
-                </button>
-              } />
+            />
             <div className="p-4 sm:p-5">
               <TransactionList refreshTrigger={refreshKey} />
             </div>
